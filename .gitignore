@@ -205,3 +205,12 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# nbdev build artifacts
+_docs/
+_proc/
+_site/
+nbs/sidebar.yml
+
+# Claude Code
+.claude/

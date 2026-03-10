@@ -1,0 +1,36 @@
+[project]
+name = "manhualizer"
+version = "0.1.0"
+description = "A tool that converts stories into manhua style comics"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "HendrykPf" }
+]
+dependencies = [
+    "nbdev>=3.0.12",
+]
+
+[project.urls]
+Homepage = "https://HendrykPf.github.io/manhualizer/"
+Repository = "https://github.com/HendrykPf/manhualizer"
+
+[tool.nbdev]
+repo = "manhualizer"
+user = "HendrykPf"
+branch = "main"
+nbs_path = "nbs"
+lib_path = "manhualizer"
+doc_path = "_docs"
+doc_host = "https://HendrykPf.github.io"
+doc_baseurl = "/manhualizer/"
+keywords = ["nbdev", "jupyter", "notebook", "manhua", "comics"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["manhualizer*"]
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"

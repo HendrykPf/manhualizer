@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "manhualizer"
+  site-url: "/"
+  description: "A tool that converts stories into manhua style comics"
+  repo-branch: main
+  repo-url: "https://github.com/HendrykPf/manhualizer"
