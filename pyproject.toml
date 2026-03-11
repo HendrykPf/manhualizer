@@ -41,6 +41,16 @@ doc_host = "https://HendrykPf.github.io"
 doc_baseurl = "/manhualizer/"
 keywords = ["nbdev", "jupyter", "notebook", "manhua", "comics"]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["manhualizer*"]

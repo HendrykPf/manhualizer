@@ -1,0 +1,154 @@
+{
+  "title": "The Dragon's Gift",
+  "scenes": [
+    {
+      "scene_id": "s1",
+      "title": "The Ordinary World",
+      "source_chunk": "Wei Chen was an ordinary farmer...",
+      "panels": [
+        {
+          "panel_number": 1,
+          "scene_id": "s1",
+          "characters_present": [
+            "Wei Chen"
+          ],
+          "location": "Qinghe Village",
+          "action_description": "Wei Chen tends his rice paddies alone at dawn",
+          "visual_prompt": "manhua style, Chinese comic art, clean ink lines, vibrant flat colours, chinese farming village rice paddies morning mist, young Chinese farmer short black hair earth-toned robes, tends rice paddies alone, peaceful, wide shot",
+          "dialogue": [
+            {
+              "speaker": "narration",
+              "text": "Every morning, the same fields. Every evening, the same house.",
+              "bubble_type": "caption"
+            }
+          ],
+          "mood": "peaceful",
+          "camera_angle": "wide shot"
+        },
+        {
+          "panel_number": 2,
+          "scene_id": "s1",
+          "characters_present": [
+            "Wei Chen"
+          ],
+          "location": "Qinghe Village",
+          "action_description": "Wei Chen pauses and looks toward the mountain, longing",
+          "visual_prompt": "manhua style, Chinese comic art, clean ink lines, vibrant flat colours, chinese farming village mountain backdrop, young Chinese farmer short black hair, gazes at distant mountain, wistful longing, medium shot",
+          "dialogue": [
+            {
+              "speaker": "Wei Chen",
+              "text": "Is this all there is?",
+              "bubble_type": "thought"
+            }
+          ],
+          "mood": "melancholic",
+          "camera_angle": "medium shot"
+        }
+      ]
+    },
+    {
+      "scene_id": "s2",
+      "title": "The Discovery",
+      "source_chunk": "One autumn day, while clearing brush...",
+      "panels": [
+        {
+          "panel_number": 3,
+          "scene_id": "s2",
+          "characters_present": [
+            "Wei Chen"
+          ],
+          "location": "Mountain Cave",
+          "action_description": "Wei Chen discovers the glowing jade egg in the cave",
+          "visual_prompt": "manhua style, Chinese comic art, clean ink lines, vibrant flat colours, ancient mountain cave jade-green glow moss-covered stone, young Chinese farmer, discovers glowing jade egg, mysterious awe, close-up",
+          "dialogue": [
+            {
+              "speaker": "Wei Chen",
+              "text": "What... is this?",
+              "bubble_type": "speech"
+            }
+          ],
+          "mood": "dramatic",
+          "camera_angle": "close-up"
+        },
+        {
+          "panel_number": 4,
+          "scene_id": "s2",
+          "characters_present": [
+            "Wei Chen",
+            "Grandma Liu"
+          ],
+          "location": "Qinghe Village",
+          "action_description": "Grandma Liu warns Wei Chen to leave the egg",
+          "visual_prompt": "manhua style, Chinese comic art, clean ink lines, vibrant flat colours, chinese farming village, elderly Chinese woman white hair bun embroidered jacket wooden cane and young farmer, elder warns young man, tense concern, over-the-shoulder",
+          "dialogue": [
+            {
+              "speaker": "Grandma Liu",
+              "text": "Leave it, child. Dragon eggs bring fortune or ruin — nothing between.",
+              "bubble_type": "speech"
+            },
+            {
+              "speaker": "Wei Chen",
+              "text": "I cannot abandon it.",
+              "bubble_type": "speech"
+            }
+          ],
+          "mood": "tense",
+          "camera_angle": "over-the-shoulder"
+        }
+      ]
+    },
+    {
+      "scene_id": "s3",
+      "title": "Silver Pearl",
+      "source_chunk": "He took the egg home...",
+      "panels": [
+        {
+          "panel_number": 5,
+          "scene_id": "s3",
+          "characters_present": [
+            "Wei Chen",
+            "Yinzhu"
+          ],
+          "location": "Wei Chen's House",
+          "action_description": "The egg hatches — Yinzhu emerges and meets Wei Chen",
+          "visual_prompt": "manhua style, Chinese comic art, clean ink lines, vibrant flat colours, small chinese farmhouse hearth glow, young farmer and small silver dragon shimmering scales gold eyes, dragon hatches and looks at farmer, wonder and recognition, low angle",
+          "dialogue": [
+            {
+              "speaker": "narration",
+              "text": "Three days. Then the world cracked open.",
+              "bubble_type": "caption"
+            }
+          ],
+          "mood": "dramatic",
+          "camera_angle": "low angle"
+        },
+        {
+          "panel_number": 6,
+          "scene_id": "s3",
+          "characters_present": [
+            "Wei Chen",
+            "Yinzhu"
+          ],
+          "location": "Wei Chen's House",
+          "action_description": "Wei Chen and Yinzhu look at each other — a bond is forged",
+          "visual_prompt": "manhua style, Chinese comic art, clean ink lines, vibrant flat colours, small chinese farmhouse warm firelight, young Chinese farmer holding small silver dragon, bonding moment, warm glow, close-up",
+          "dialogue": [
+            {
+              "speaker": "Wei Chen",
+              "text": "Yinzhu. Silver Pearl.",
+              "bubble_type": "speech"
+            },
+            {
+              "speaker": "narration",
+              "text": "From that day, the fate of Qinghe was forever changed.",
+              "bubble_type": "caption"
+            }
+          ],
+          "mood": "romantic",
+          "camera_angle": "close-up"
+        }
+      ]
+    }
+  ],
+  "total_panels": 6
+}

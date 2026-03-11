@@ -1,0 +1,86 @@
+{
+  "title": "The Dragon's Gift",
+  "synopsis": "An ordinary farmer discovers a dragon egg, hatches it, and bonds with the silver dragon Yinzhu, changing his village's fate forever.",
+  "characters": [
+    {
+      "name": "Wei Chen",
+      "aliases": [
+        "Dragon Keeper"
+      ],
+      "physical_description": "Young man in his mid-twenties, lean build, short black hair, calloused hands from farming, wears simple earth-toned robes",
+      "personality": "Humble and hardworking, secretly longing for adventure, compassionate and brave when it matters",
+      "arcs": [
+        {
+          "phase": "beginning",
+          "description": "Ordinary farmer, content but unfulfilled"
+        },
+        {
+          "phase": "end",
+          "description": "Dragon keeper, purpose found, protector of Qinghe"
+        }
+      ],
+      "reference_image_prompt": "young Chinese farmer, short black hair, earth-toned robes, determined expression, manhua style"
+    },
+    {
+      "name": "Grandma Liu",
+      "aliases": [
+        "Village Elder"
+      ],
+      "physical_description": "Elderly woman, white hair in a bun, kind eyes, traditional embroidered jacket, walks with a carved wooden cane",
+      "personality": "Wise and cautious, carries the weight of village history, protective of her people",
+      "arcs": [
+        {
+          "phase": "beginning",
+          "description": "Warns Wei Chen away from the egg"
+        }
+      ],
+      "reference_image_prompt": "elderly Chinese woman, white hair bun, embroidered jacket, wooden cane, wise expression, manhua style"
+    },
+    {
+      "name": "Yinzhu",
+      "aliases": [
+        "Silver Pearl"
+      ],
+      "physical_description": "Small silver dragon, scales that shimmer like moonlight, gold eyes full of ancient wisdom, delicate wings folded close to body",
+      "personality": "Ancient wisdom in a young form, deeply loyal, curious about the world",
+      "arcs": [
+        {
+          "phase": "end",
+          "description": "Bonded with Wei Chen, awakening to her power"
+        }
+      ],
+      "reference_image_prompt": "small silver dragon, shimmering scales, gold eyes, delicate wings, mythical creature, manhua style"
+    }
+  ],
+  "locations": [
+    {
+      "name": "Qinghe Village",
+      "description": "Small farming village surrounded by rice paddies and forest, at the foot of an old mountain",
+      "visual_prompt": "chinese farming village, rice paddies, wooden houses, mountain backdrop, morning mist",
+      "atmosphere": "Warm golden light, peaceful, rural, timeless"
+    },
+    {
+      "name": "Mountain Cave",
+      "description": "Ancient cave in the old mountain near the village, half-hidden by brush",
+      "visual_prompt": "ancient mountain cave, jade-green glow, moss-covered stone, mysterious shadows",
+      "atmosphere": "Cool, mysterious, faint supernatural glow"
+    },
+    {
+      "name": "Wei Chen's House",
+      "description": "Small farmhouse at the edge of the forest, simple but warm",
+      "visual_prompt": "small chinese farmhouse, hearth glow, simple furniture, forest edge at night",
+      "atmosphere": "Warm firelight, intimate, safe"
+    }
+  ],
+  "themes": [
+    "destiny",
+    "courage",
+    "companionship",
+    "transformation"
+  ],
+  "source_chunks": [
+    "Wei Chen was an ordinary farmer in the village of Qinghe.",
+    "One autumn day, while clearing brush near the old mountain cave, Wei Chen stumbled upon a large jade-green egg.",
+    "He took the egg home and kept it by the hearth."
+  ]
+}

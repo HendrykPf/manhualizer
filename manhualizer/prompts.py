@@ -20,7 +20,7 @@ class TemplateSet:
     """A loaded set of prompt templates from one directory.
     
     Template files are YAML. String values support `{variable}` substitution
-    via `render(key, **vars)`. Missing variables raise KeyError.
+    via `render(key, **vars)`. Missing variables leave the placeholder intact.
     """
 
     def __init__(self, templates_dir: Path):
@@ -46,7 +46,7 @@ class TemplateSet:
     def render(self, filename: str, key: str, **variables: Any) -> str:
         """Return the template string with `{variable}` placeholders substituted."""
         template = self.get(filename, key)
-        return template.format_map(_SafeFormatMap(variables))
+        return _safe_substitute(template, variables)
 
     # Convenience accessors for the main template files
     @property
@@ -62,10 +62,18 @@ class TemplateSet:
         return self.image_style.get("negative_prompt", "")
 
 # %% ../nbs/02_prompts.ipynb #cell-6
-class _SafeFormatMap(dict):
-    """format_map helper: leaves unresolved {keys} intact instead of raising."""
-    def __missing__(self, key: str) -> str:
-        return "{" + key + "}"
+import re
+
+def _safe_substitute(template: str, variables: dict) -> str:
+    """Substitute only simple `{identifier}` placeholders; leave all else intact.
+    
+    Unlike str.format_map(), this never recurses into complex `{...}` blocks
+    (e.g. literal JSON examples in prompt templates).
+    """
+    def _replace(m: re.Match) -> str:
+        key = m.group(1)
+        return str(variables[key]) if key in variables else m.group(0)
+    return re.sub(r'\{(\w+)\}', _replace, template)
 
 # %% ../nbs/02_prompts.ipynb #cell-7
 def load_templates(
