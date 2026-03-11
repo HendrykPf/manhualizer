@@ -5,5 +5,5 @@
 # %% auto #0
 __all__ = ['foo']
 
-# %% ../nbs/00_core.ipynb #cbbe2499
+# %% ../nbs/00_core.ipynb #5024b471
 def foo(): pass
