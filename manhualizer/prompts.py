@@ -12,8 +12,14 @@ import yaml
 __all__ = ['TemplateSet', 'load_templates', 'list_builtin_templates', 'build_panel_prompt', 'build_character_sheet_prompt']
 
 # %% ../nbs/02_prompts.ipynb #cell-4
-# Built-in templates ship inside the package
-_BUILTIN_TEMPLATES_DIR = Path(__file__).parent / "templates"
+# Built-in templates ship inside the package.
+# In notebook context __file__ is not defined, so we fall back to
+# resolving relative to the installed package location.
+try:
+    _BUILTIN_TEMPLATES_DIR = Path(__file__).parent / "templates"
+except NameError:
+    import manhualizer as _pkg
+    _BUILTIN_TEMPLATES_DIR = Path(_pkg.__file__).parent / "templates"
 
 # %% ../nbs/02_prompts.ipynb #cell-5
 class TemplateSet:

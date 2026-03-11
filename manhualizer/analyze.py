@@ -61,7 +61,7 @@ def _merge_analyses_local(partials: list[dict]) -> dict:
     """Merge partial analysis dicts locally without an extra LLM call.
 
     Characters and locations are deduplicated by name (case-insensitive).
-    Later entries take precedence for scalar fields; arcs are combined.
+    Later entries take precedence for scalar fields; arcs and aliases are combined.
     """
     merged: dict[str, Any] = {
         "title": "",
@@ -91,6 +91,12 @@ def _merge_analyses_local(partials: list[dict]) -> dict:
                 for field in ("physical_description", "personality", "reference_image_prompt"):
                     if char.get(field) and len(char[field]) > len(existing.get(field, "")):
                         existing[field] = char[field]
+                # Combine aliases
+                seen_aliases = set(existing.get("aliases", []))
+                for alias in char.get("aliases", []):
+                    if alias not in seen_aliases:
+                        existing.setdefault("aliases", []).append(alias)
+                        seen_aliases.add(alias)
                 # Combine arcs
                 seen_phases = {a["phase"] for a in existing.get("arcs", [])}
                 for arc in char.get("arcs", []):
