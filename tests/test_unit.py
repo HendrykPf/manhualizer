@@ -259,7 +259,7 @@ class TestValidateHelpers:
 
 class TestModelRegistry:
     def test_all_models_registered(self):
-        assert set(list_models()) == {"nanobanana", "chatgpt-image", "seadreem", "flux-klein", "comfyui"}
+        assert set(list_models()) == {"nanobanana", "chatgpt-image", "seedream", "seedream-4.5", "flux-klein", "comfyui"}
 
     def test_nanobanana_capabilities(self):
         caps = MODELS["nanobanana"].capabilities

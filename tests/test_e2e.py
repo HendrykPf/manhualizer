@@ -346,7 +346,7 @@ class TestCLI:
     def test_models_command(self):
         result = CliRunner().invoke(app, ["models"])
         assert result.exit_code == 0
-        for model in ["nanobanana", "chatgpt-image", "seadreem", "flux-klein", "comfyui"]:
+        for model in ["nanobanana", "chatgpt-image", "seedream", "seedream-4.5", "flux-klein", "comfyui"]:
             assert model in result.output
 
     def test_models_shows_capabilities(self):

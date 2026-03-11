@@ -71,14 +71,25 @@ MODELS: dict[str, ModelSpec] = {
             lora=False,
         ),
     ),
-    "seadreem": ModelSpec(
-        name="seadreem",
-        display_name="Seadreem",
-        renderer_class="manhualizer.renderers.seadreem.SeadreemRenderer",
+    "seedream": ModelSpec(
+        name="seedream",
+        display_name="Seedream (Replicate)",
+        renderer_class="manhualizer.renderers.seedream.SeedreamRenderer",
         capabilities=ModelCapabilities(
             reference_images=False,
             lora=True,
             negative_prompt=True,
+        ),
+    ),
+    "seedream-4.5": ModelSpec(
+        name="seedream-4.5",
+        display_name="Seedream 4.5 (Bytedance / Replicate)",
+        renderer_class="manhualizer.renderers.seedream_4_5.Seedream45Renderer",
+        capabilities=ModelCapabilities(
+            reference_images=True,
+            multi_image_input=True,
+            lora=False,
+            negative_prompt=False,
         ),
     ),
     "flux-klein": ModelSpec(

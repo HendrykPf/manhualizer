@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 import yaml
 
 # %% auto #0
-__all__ = ['OutputConfig', 'LLMConfig', 'LoRAConfig', 'NanaBananaConfig', 'ChatGPTImageConfig', 'SeadreemConfig',
-           'FluxKleinConfig', 'ComfyUIConfig', 'RendererConfig', 'PipelineConfig', 'load_config']
+__all__ = ['OutputConfig', 'LLMConfig', 'LoRAConfig', 'NanaBananaConfig', 'ChatGPTImageConfig', 'SeedreamConfig',
+           'Seedream45Config', 'FluxKleinConfig', 'ComfyUIConfig', 'RendererConfig', 'PipelineConfig', 'load_config']
 
 # %% ../nbs/01_config.ipynb #1d3f3bb3
 class OutputConfig(BaseModel):
@@ -65,10 +65,19 @@ class ChatGPTImageConfig(BaseModel):
     """API key read from OPENAI_API_KEY env var."""
 
 # %% ../nbs/01_config.ipynb #e5292305
-class SeadreemConfig(BaseModel):
-    """Config for the Seadreem model."""
+class SeedreamConfig(BaseModel):
+    """Config for the Seedream model (generic Replicate deployment)."""
     model_ref: str = ""
     """Model reference (e.g. Replicate model string). Set to your deployment."""
+
+# %% ../nbs/01_config.ipynb #1bc69cgzr0e
+class Seedream45Config(BaseModel):
+    """Config for Seedream 4.5 (bytedance/seedream-4.5 on Replicate).
+    
+    The model endpoint is fixed — no model_ref needed.
+    All generation parameters are derived from OutputConfig and the panel prompt.
+    """
+    pass
 
 # %% ../nbs/01_config.ipynb #f8264ee6
 class FluxKleinConfig(BaseModel):
@@ -89,12 +98,13 @@ class ComfyUIConfig(BaseModel):
 class RendererConfig(BaseModel):
     """Image generation settings: which model to use and its parameters."""
     model: str = "flux-klein"
-    """Key into the model registry. One of: nanobanana, chatgpt-image, seadreem, flux-klein, comfyui."""
+    """Key into the model registry. One of: nanobanana, chatgpt-image, seedream, seedream-4.5, flux-klein, comfyui."""
     loras: list[LoRAConfig] = Field(default_factory=list)
     """LoRA weights to apply. Silently ignored for models that don't support LoRA."""
     nanobanana: NanaBananaConfig = Field(default_factory=NanaBananaConfig)
     chatgpt_image: ChatGPTImageConfig = Field(default_factory=ChatGPTImageConfig)
-    seadreem: SeadreemConfig = Field(default_factory=SeadreemConfig)
+    seedream: SeedreamConfig = Field(default_factory=SeedreamConfig)
+    seedream_45: Seedream45Config = Field(default_factory=Seedream45Config)
     flux_klein: FluxKleinConfig = Field(default_factory=FluxKleinConfig)
     comfyui: ComfyUIConfig = Field(default_factory=ComfyUIConfig)
 
