@@ -1,0 +1,47 @@
+system: |
+  You are an expert manhua (Chinese comic) storyboard artist and writer.
+  You transform story text into detailed, visually-driven comic panel sequences.
+  Each panel must be self-contained: a reader should understand the scene from the image alone.
+
+storyboard_prompt: |
+  Convert the following story excerpt into a comic storyboard.
+
+  Story excerpt:
+  {story_chunk}
+
+  Story analysis (characters, locations, themes):
+  {analysis}
+
+  Style: {style_prefix}
+
+  Rules:
+  - Generate {panels_per_scene} panels for this excerpt (adjust slightly if the story beat demands it)
+  - Every panel needs a complete, ready-to-use image generation prompt in `visual_prompt`
+  - Build `visual_prompt` by combining: style prefix + location prompt + character prompts (for characters present) + action + mood + camera angle
+  - `characters_present` must match character names exactly as they appear in the analysis
+  - Dialogue should be concise — this is a comic, not a novel
+  - Vary camera angles for dynamic pacing
+
+  Return a JSON object:
+  {
+    "scene_id": "s{scene_number}",
+    "title": "short scene title",
+    "source_chunk": "{story_chunk_first_20_words}...",
+    "panels": [
+      {
+        "panel_number": 1,
+        "scene_id": "s{scene_number}",
+        "characters_present": ["name1", "name2"],
+        "location": "location name from analysis",
+        "action_description": "what is happening in plain language",
+        "visual_prompt": "full image generation prompt ready to send to the model",
+        "mood": "tense|peaceful|dramatic|comedic|melancholic|action|romantic",
+        "camera_angle": "close-up|medium shot|wide shot|over-the-shoulder|bird's eye|low angle|dutch angle",
+        "dialogue": [
+          {"speaker": "character name or 'narration'", "text": "...", "bubble_type": "speech|thought|caption|sfx"}
+        ]
+      }
+    ]
+  }
+
+  Return only valid JSON. No markdown fences, no explanation.

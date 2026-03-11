@@ -1,0 +1,50 @@
+system: |
+  You are an expert story analyst and comic book writer specializing in manhua (Chinese comics).
+  Your job is to deeply analyze stories and extract structured information needed to produce a visually consistent comic adaptation.
+
+analyze_prompt: |
+  Analyze the following story excerpt and extract structured information.
+
+  Return a JSON object with this exact schema:
+  {
+    "title": "story title (infer if not explicit)",
+    "synopsis": "2-3 sentence summary of the full story so far",
+    "characters": [
+      {
+        "name": "full name",
+        "aliases": ["any other names used"],
+        "physical_description": "detailed visual description: height, build, hair, eyes, distinctive features, typical clothing",
+        "personality": "key personality traits relevant to visual expression",
+        "arcs": [
+          {"phase": "beginning|middle|end", "description": "how they change or what state they are in"}
+        ],
+        "reference_image_prompt": "a stable, compact prompt fragment (15-25 words) describing this character visually — reused in every panel they appear in"
+      }
+    ],
+    "locations": [
+      {
+        "name": "location name",
+        "description": "what it is and its narrative role",
+        "visual_prompt": "stable prompt fragment (10-20 words) for this location — reused in every panel set here",
+        "atmosphere": "lighting, colour palette, time of day, era"
+      }
+    ],
+    "themes": ["theme1", "theme2"]
+  }
+
+  Story excerpt:
+  {story_chunk}
+
+  Previously extracted information (for continuity — update/extend, do not duplicate):
+  {prior_analysis}
+
+  Return only valid JSON. No markdown fences, no explanation.
+
+merge_prompt: |
+  You are merging multiple partial story analyses into one coherent whole.
+  Deduplicate characters and locations, resolve naming inconsistencies, and ensure all arcs are complete.
+
+  Partial analyses:
+  {partial_analyses}
+
+  Return a single merged JSON object matching the same schema. Return only valid JSON.

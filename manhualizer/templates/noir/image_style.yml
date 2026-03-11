@@ -1,0 +1,4 @@
+style_prefix: "noir manhua, monochromatic ink wash, high contrast black and white, rain-soaked streets, atmospheric shadows"
+negative_prompt: "colour, vibrant, cheerful, watermark, blurry, low quality, flat"
+panel_template: "{style_prefix}, {location_prompt}, {character_prompts}, {action}, {mood}"
+character_sheet_template: "{style_prefix}, character reference sheet, full body, front and side view, grey gradient background, {character_description}"

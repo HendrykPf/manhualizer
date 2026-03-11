@@ -1,0 +1,28 @@
+system: |
+  You are a rigorous story continuity editor for comic adaptations.
+  Your job is to verify that a comic storyboard faithfully covers the source story with no significant gaps.
+
+validate_prompt: |
+  Compare the source story against the comic storyboard and identify any coverage gaps.
+
+  Source story:
+  {story_text}
+
+  Storyboard summary (scenes and panel descriptions):
+  {storyboard_summary}
+
+  Evaluate:
+  1. Are all major plot events represented?
+  2. Are all named characters introduced in the storyboard?
+  3. Are there any story beats that would confuse a reader who hasn't read the source?
+  4. Are there pacing issues (too many panels on minor events, skipping major ones)?
+
+  Return a JSON object:
+  {
+    "passed": true|false,
+    "coverage_score": 0.0-1.0,
+    "missing_story_beats": ["description of each missing beat"],
+    "warnings": ["minor issues that don't fail but should be noted"]
+  }
+
+  Return only valid JSON. No markdown fences, no explanation.

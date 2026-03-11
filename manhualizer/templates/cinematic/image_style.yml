@@ -1,0 +1,4 @@
+style_prefix: "cinematic manhua, dramatic lighting, deep shadows, film noir influence, detailed backgrounds, widescreen composition"
+negative_prompt: "flat colours, simple, cartoon, chibi, watermark, blurry, low quality"
+panel_template: "{style_prefix}, {location_prompt}, {character_prompts}, {action}, {mood}"
+character_sheet_template: "{style_prefix}, character reference sheet, full body, front and side view, neutral dark background, {character_description}"
