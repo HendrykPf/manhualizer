@@ -41,6 +41,38 @@ def _location_lookup(analysis: StoryAnalysis) -> dict[str, str]:
     }
 
 
+def _dialogue_instructions(panel_data: dict) -> str:
+    """Build image prompt instructions for dialogue bubbles.
+
+    Tells the image model to render text inside speech/thought/caption bubbles
+    directly in the image so panels are self-contained for vertical scrolling.
+    """
+    dialogue = panel_data.get("dialogue", [])
+    if not dialogue:
+        return ""
+
+    parts = []
+    for d in dialogue:
+        bubble = d.get("bubble_type", "speech")
+        speaker = d.get("speaker", "")
+        text = d.get("text", "")
+        if not text:
+            continue
+
+        if bubble == "caption" or speaker == "narration":
+            parts.append(f'narration box with text "{text}"')
+        elif bubble == "thought":
+            parts.append(f'thought bubble from {speaker} saying "{text}"')
+        elif bubble == "sfx":
+            parts.append(f'bold sound effect text "{text}"')
+        else:
+            parts.append(f'speech bubble from {speaker} saying "{text}"')
+
+    if not parts:
+        return ""
+    return "Contains: " + "; ".join(parts) + "."
+
+
 def _assemble_visual_prompt(
     panel_data: dict,
     templates: TemplateSet,
@@ -51,15 +83,20 @@ def _assemble_visual_prompt(
 
     If the LLM already produced a complete visual_prompt, use it directly.
     Otherwise build from parts using the style template.
+    Dialogue bubble instructions are always appended so panels are self-contained.
     """
+    dialogue_part = _dialogue_instructions(panel_data)
+
     # Use LLM-provided prompt if present and substantial
     llm_prompt = panel_data.get("visual_prompt", "").strip()
     if llm_prompt and len(llm_prompt) > 20:
         # Ensure style prefix is prepended if missing
         style = templates.style_prefix
         if style and not llm_prompt.lower().startswith(style[:15].lower()):
-            return f"{style}, {llm_prompt}"
-        return llm_prompt
+            base = f"{style}, {llm_prompt}"
+        else:
+            base = llm_prompt
+        return f"{base}. {dialogue_part}" if dialogue_part else base
 
     # Build from parts
     location_name = panel_data.get("location", "").lower()
@@ -75,7 +112,8 @@ def _assemble_visual_prompt(
 
     style_prefix = templates.style_prefix
     parts = [p for p in [style_prefix, location_prompt, character_prompts, action, mood, camera] if p]
-    return ", ".join(parts)
+    base = ", ".join(parts)
+    return f"{base}. {dialogue_part}" if dialogue_part else base
 
 # %% ../nbs/05_storyboard.ipynb #cell-7
 def _parse_panel(

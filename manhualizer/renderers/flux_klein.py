@@ -36,14 +36,18 @@ class FluxKleinRenderer(BaseRenderer):
         return replicate
 
     def _build_input(self, panel: Panel, output_cfg: OutputConfig, negative_prompt: str = "") -> dict:
-        w, h = output_cfg.resolved_dimensions()
         inp: dict = {
             "prompt": panel.visual_prompt,
-            "width": w,
-            "height": h,
             "num_outputs": 1,
             "output_format": output_cfg.format,
         }
+        # Prefer aspect_ratio string; fall back to width/height
+        if output_cfg.aspect_ratio:
+            inp["aspect_ratio"] = output_cfg.aspect_ratio
+        else:
+            w, h = output_cfg.resolved_dimensions()
+            inp["width"] = w
+            inp["height"] = h
         if negative_prompt:
             inp["negative_prompt"] = negative_prompt
         if self.config.loras:
