@@ -214,3 +214,8 @@ nbs/sidebar.yml
 
 # Claude Code
 .claude/
+
+# Secrets & local config (never commit)
+.env
+.env.*
+manhualizer.yml

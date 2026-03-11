@@ -1,0 +1,61 @@
+# manhualizer.yml.example
+# Copy to manhualizer.yml and adjust for your project.
+# IMPORTANT: Never commit manhualizer.yml — it may contain sensitive paths.
+# API keys must be set as environment variables, NOT in this file.
+#
+# Required env vars (set only what your chosen model/LLM needs):
+#   ANTHROPIC_API_KEY    — for anthropic/* LLM models
+#   OPENAI_API_KEY       — for openai/* LLM models or chatgpt-image renderer
+#   GOOGLE_API_KEY       — for nanobanana renderer
+#   REPLICATE_API_TOKEN  — for seadreem / flux-klein renderers
+
+llm:
+  model: "anthropic/claude-sonnet-4-6"   # litellm format: provider/model
+  temperature: 0.7
+  max_tokens: 8192
+
+renderer:
+  model: "flux-klein"   # one of: nanobanana, chatgpt-image, seadreem, flux-klein, comfyui
+
+  # LoRA weights (only applied for models that support it: flux-klein, seadreem, comfyui)
+  loras: []
+  # loras:
+  #   - path: "https://example.com/my_style.safetensors"
+  #     strength: 0.8
+  #     trigger_word: "my_style"
+
+  # Model-specific settings (only the active model's block is used)
+  nanobanana:
+    model: "imagen-3.0-generate-002"
+    location: "us-central1"
+
+  chatgpt_image:
+    model: "dall-e-3"
+    quality: "standard"   # or "hd"
+
+  seadreem:
+    model_ref: ""   # set to your Seadreem model reference
+
+  flux_klein:
+    model_ref: ""   # set to your Flux Klein 9B model reference
+
+  comfyui:
+    base_url: "http://127.0.0.1:8188"
+    workflow_template_path: ""   # path to ComfyUI workflow JSON (API format)
+    poll_interval: 2.0
+    timeout: 120.0
+
+output:
+  dir: "output"
+  format: "png"       # png, jpg, or webp
+  width: 1024
+  height: 1536        # 2:3 vertical manhua default
+  # aspect_ratio: "9:16"   # uncomment to override width/height
+
+template: "default"   # built-in: default, cinematic, noir
+# custom_templates_dir: "./my_templates"   # path to custom template YAML files
+
+panels_per_scene: 4
+max_chunk_tokens: 3000
+validate: false       # set to true to run the optional LLM validation step (slower)
+resume: true          # skip steps whose output files already exist
