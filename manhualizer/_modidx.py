@@ -84,4 +84,12 @@ d = { 'settings': { 'branch': 'main',
                                         'manhualizer.storyboard._parse_scene': ( 'storyboard.html#_parse_scene',
                                                                                  'manhualizer/storyboard.py'),
                                         'manhualizer.storyboard.build_storyboard': ( 'storyboard.html#build_storyboard',
-                                                                                     'manhualizer/storyboard.py')}}}
+                                                                                     'manhualizer/storyboard.py')},
+            'manhualizer.validate': { 'manhualizer.validate._check_character_coverage': ( 'validate.html#_check_character_coverage',
+                                                                                          'manhualizer/validate.py'),
+                                      'manhualizer.validate._parse_validation': ( 'validate.html#_parse_validation',
+                                                                                  'manhualizer/validate.py'),
+                                      'manhualizer.validate._summarise_storyboard': ( 'validate.html#_summarise_storyboard',
+                                                                                      'manhualizer/validate.py'),
+                                      'manhualizer.validate.validate_storyboard': ( 'validate.html#validate_storyboard',
+                                                                                    'manhualizer/validate.py')}}}
