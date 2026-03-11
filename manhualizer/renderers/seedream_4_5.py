@@ -15,13 +15,17 @@ from ..render import BaseRenderer, ModelSpec
 __all__ = ['Seedream45Renderer']
 
 # %% ../../nbs/08_renderers/seedream_4_5.ipynb #cell-4
+from fractions import Fraction
+
 _MODEL_ID = "bytedance/seedream-4.5"
 
 class Seedream45Renderer(BaseRenderer):
     """Image generation via Seedream 4.5 (bytedance/seedream-4.5) on Replicate.
 
     Supports multi-image reference input (up to 14 images) for character consistency.
-    Uses 'custom' size mode with dimensions from OutputConfig.
+    Uses size="2K" (2048px long edge) with aspect ratio derived from OutputConfig.
+    Minimum pixel count enforced by the model is ~3.7 MP — custom pixel sizes below
+    that threshold are rejected, so we always use the named size tiers.
 
     Requires: REPLICATE_API_TOKEN environment variable.
     """
@@ -32,6 +36,12 @@ class Seedream45Renderer(BaseRenderer):
             raise EnvironmentError("REPLICATE_API_TOKEN is not set")
         return replicate
 
+    @staticmethod
+    def _aspect_ratio_str(w: int, h: int) -> str:
+        """Convert pixel dimensions to a simplified ratio string, e.g. '2:3'."""
+        frac = Fraction(w, h).limit_denominator(20)
+        return f"{frac.numerator}:{frac.denominator}"
+
     def _build_input(
         self,
         panel: Panel,
@@ -39,17 +49,15 @@ class Seedream45Renderer(BaseRenderer):
         reference_images: dict[str, Path] | None = None,
     ) -> dict:
         w, h = output_cfg.resolved_dimensions()
+        size = "4K" if max(w, h) > 2048 else "2K"
         inp: dict = {
             "prompt": panel.visual_prompt,
-            "size": "custom",
-            "width": w,
-            "height": h,
+            "size": size,
+            "aspect_ratio": output_cfg.aspect_ratio or self._aspect_ratio_str(w, h),
             "sequential_image_generation": "disabled",
         }
         if reference_images:
-            # Replicate client accepts open file handles; it uploads them automatically.
-            # Only include images for characters appearing in this panel.
-            chars_in_panel = {c.lower() for c in (panel.characters or [])}
+            chars_in_panel = {c.lower() for c in panel.characters_present}
             images = [
                 open(path, "rb")
                 for name, path in reference_images.items()
@@ -95,5 +103,5 @@ class Seedream45Renderer(BaseRenderer):
             image_path=out_path,
             backend_used=self.model_spec.name,
             prompt_used=panel.visual_prompt,
-            metadata={"ref_images": len(inp.get("image_input", []))},
+            metadata={"size": inp["size"], "aspect_ratio": inp["aspect_ratio"], "ref_images": len(inp.get("image_input", []))},
         )
