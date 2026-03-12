@@ -42,7 +42,7 @@ class LLMConfig(BaseModel):
     - "anthropic/claude-haiku-4-5-20251001" → ANTHROPIC_API_KEY (fastest/cheapest)
     - "openai/gpt-4o"                   → OPENAI_API_KEY
     """
-    model: str = "openrouter/moonshotai/kimi-k2"
+    model: str = "anthropic/claude-sonnet-4-6"
     temperature: float = 0.7
     max_tokens: int = 16384
 
