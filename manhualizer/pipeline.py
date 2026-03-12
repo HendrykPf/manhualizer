@@ -23,6 +23,7 @@ from .validate import validate_storyboard
 
 _console = Console()
 
+
 # %% auto #0
 __all__ = ['run', 'run_analyze_only', 'run_storyboard_only', 'run_render_only']
 
@@ -155,6 +156,7 @@ def run(
     _console.print(Rule())
     _console.print(f"[bold green]Done![/bold green] {len(render_results)} panel(s) → {output_dir}")
     return result
+
 
 # %% ../nbs/10_pipeline.ipynb #cell-6
 def run_analyze_only(
