@@ -129,3 +129,4 @@ class ComicOutput(BaseModel):
     storyboard_path: Path
     validation_path: Path | None = None
     rendered_panels: list[RenderResult] = Field(default_factory=list)
+    html_path: Path | None = None

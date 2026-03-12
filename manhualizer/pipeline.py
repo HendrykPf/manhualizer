@@ -12,6 +12,7 @@ from rich.console import Console
 from rich.rule import Rule
 
 from .analyze import analyze_story
+from .html import generate_html_viewer
 from .character_sheets import generate_character_sheets_async
 from .config import PipelineConfig
 from .llm import LLMClient
@@ -153,8 +154,11 @@ def run(
         rendered_panels=render_results,
     )
 
+    result.html_path = generate_html_viewer(result, storyboard, title=analysis.title)
+
     _console.print(Rule())
     _console.print(f"[bold green]Done![/bold green] {len(render_results)} panel(s) → {output_dir}")
+    _console.print(f"  [dim]viewer → {result.html_path}[/dim]")
     return result
 
 
