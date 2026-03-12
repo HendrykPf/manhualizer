@@ -1,4 +1,4 @@
-style_prefix: "noir manhua, monochromatic ink wash, high contrast black and white, rain-soaked streets, atmospheric shadows"
-negative_prompt: "colour, vibrant, cheerful, watermark, blurry, low quality, flat"
+style_prefix: "noir manhua, monochromatic ink wash, high contrast black and white, atmospheric shadows, clean ink outlines, flat greyscale illustration"
+negative_prompt: "photorealistic, hyperrealistic, 3d render, photography, realistic skin texture, colour, vibrant, cheerful, watermark, blurry, low quality"
 panel_template: "{style_prefix}, {location_prompt}, {character_prompts}, {action}, {mood}"
 character_sheet_template: "{style_prefix}, character reference sheet, full body, front and side view, grey gradient background, {character_description}"

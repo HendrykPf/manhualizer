@@ -6,12 +6,15 @@
 from __future__ import annotations
 import json
 import re
-import textwrap
+import time
 from typing import Any
 
 import litellm
+from rich.console import Console
 from .config import LLMConfig
 from .prompts import TemplateSet
+
+_console = Console()
 
 # %% auto #0
 __all__ = ['chunk_story', 'extract_json', 'LLMClient']
@@ -119,25 +122,47 @@ class LLMClient:
         temperature: float | None = None,
         max_tokens: int | None = None,
     ) -> str:
-        """Call the LLM and return the response text."""
+        """Call the LLM and return the response text.
+
+        Automatically retries on rate limit errors with exponential backoff
+        (60 s, 120 s, 180 s) before giving up.
+        """
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": user_prompt})
 
-        response = litellm.completion(
-            model=self.config.model,
-            messages=messages,
-            temperature=temperature if temperature is not None else self.config.temperature,
-            max_tokens=max_tokens if max_tokens is not None else self.config.max_tokens,
-        )
-        return response.choices[0].message.content
+        kwargs = {
+            "model": self.config.model,
+            "messages": messages,
+            "temperature": temperature if temperature is not None else self.config.temperature,
+            "max_tokens": max_tokens if max_tokens is not None else self.config.max_tokens,
+        }
+
+        max_rate_retries = 3
+        for attempt in range(max_rate_retries + 1):
+            try:
+                response = litellm.completion(**kwargs)
+                return response.choices[0].message.content
+            except (litellm.exceptions.RateLimitError, litellm.exceptions.InternalServerError) as e:
+                if attempt >= max_rate_retries:
+                    raise
+                # 429 rate limit → long backoff; 529 overloaded → shorter backoff
+                is_overloaded = isinstance(e, litellm.exceptions.InternalServerError)
+                wait = 30 * (attempt + 1) if is_overloaded else 60 * (attempt + 1)
+                label = "overloaded (529)" if is_overloaded else "rate limit (429)"
+                _console.print(
+                    f"[yellow]llm: {label} — waiting {wait}s before retry "
+                    f"({attempt + 1}/{max_rate_retries})[/yellow]"
+                )
+                time.sleep(wait)
 
     def complete_json(
         self,
         user_prompt: str,
         system_prompt: str = "",
         retries: int = 2,
+        max_tokens: int | None = None,
     ) -> Any:
         """Call the LLM and parse the response as JSON.
 
@@ -147,7 +172,7 @@ class LLMClient:
         last_error: Exception | None = None
         prompt = user_prompt
         for attempt in range(retries + 1):
-            text = self.complete(prompt, system_prompt)
+            text = self.complete(prompt, system_prompt, max_tokens=max_tokens)
             try:
                 return extract_json(text)
             except ValueError as e:
@@ -166,6 +191,7 @@ class LLMClient:
         prompt_key: str,
         system_key: str = "system",
         as_json: bool = False,
+        max_tokens: int | None = None,
         **variables: Any,
     ) -> str | Any:
         """Render a template and call the LLM.
@@ -175,6 +201,7 @@ class LLMClient:
             prompt_key: Key in the YAML for the user prompt template
             system_key: Key in the YAML for the system prompt (default 'system')
             as_json: If True, parse and return the response as JSON
+            max_tokens: Override the default max_tokens for this call only
             **variables: Template substitution variables
         """
         user_prompt = self.templates.render(template_file, prompt_key, **variables)
@@ -184,5 +211,5 @@ class LLMClient:
             system_prompt = ""
 
         if as_json:
-            return self.complete_json(user_prompt, system_prompt)
-        return self.complete(user_prompt, system_prompt)
+            return self.complete_json(user_prompt, system_prompt, max_tokens=max_tokens)
+        return self.complete(user_prompt, system_prompt, max_tokens=max_tokens)

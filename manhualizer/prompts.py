@@ -24,18 +24,26 @@ except NameError:
 # %% ../nbs/02_prompts.ipynb #cell-5
 class TemplateSet:
     """A loaded set of prompt templates from one directory.
-    
+
     Template files are YAML. String values support `{variable}` substitution
     via `render(key, **vars)`. Missing variables leave the placeholder intact.
+
+    If `fallback_dir` is given, any file not found in `templates_dir` is
+    loaded from there instead. This lets style-only templates (e.g. cinematic,
+    noir) override only `image_style.yml` while inheriting all other prompt
+    files from the default template.
     """
 
-    def __init__(self, templates_dir: Path):
+    def __init__(self, templates_dir: Path, fallback_dir: Path | None = None):
         self._dir = templates_dir
+        self._fallback_dir = fallback_dir
         self._cache: dict[str, dict] = {}
 
     def _load(self, filename: str) -> dict:
         if filename not in self._cache:
             path = self._dir / filename
+            if not path.exists() and self._fallback_dir is not None:
+                path = self._fallback_dir / filename
             if not path.exists():
                 raise FileNotFoundError(f"Template not found: {path}")
             with open(path) as f:
@@ -92,13 +100,16 @@ def load_templates(
     1. `custom_dir/<template_name>/` if provided
     2. Built-in `manhualizer/templates/<template_name>/`
 
-    For style-only custom templates (e.g. a custom `image_style.yml`),
-    individual files fall back to the `default` built-in template.
+    For style-only templates (e.g. cinematic, noir) that only override
+    `image_style.yml`, all other prompt files fall back to the `default`
+    built-in template automatically.
     """
+    default_dir = _BUILTIN_TEMPLATES_DIR / "default"
+
     if custom_dir is not None:
         candidate = Path(custom_dir) / template_name
         if candidate.is_dir():
-            return TemplateSet(candidate)
+            return TemplateSet(candidate, fallback_dir=default_dir)
 
     builtin = _BUILTIN_TEMPLATES_DIR / template_name
     if not builtin.is_dir():
@@ -106,7 +117,9 @@ def load_templates(
             f"Unknown template '{template_name}'. "
             f"Built-in options: {list_builtin_templates()}"
         )
-    return TemplateSet(builtin)
+    # Default template has no fallback; non-default templates fall back to default.
+    fallback = None if template_name == "default" else default_dir
+    return TemplateSet(builtin, fallback_dir=fallback)
 
 
 def list_builtin_templates() -> list[str]:

@@ -56,9 +56,17 @@ class StoryAnalysis(BaseModel):
 class DialogueBubble(BaseModel):
     """A single speech/thought/caption bubble in a panel."""
     speaker: str
-    """Character name, or 'narration' / 'caption' for non-character text."""
+    """Character name, or 'narration' for non-character text. Always exactly ONE name."""
     text: str
-    bubble_type: Literal["speech", "thought", "caption", "sfx"] = "speech"
+    bubble_type: Literal["speech", "shout", "whisper", "thought", "caption", "sfx"] = "speech"
+    """
+    speech  — normal spoken dialogue (oval bubble, pointed tail)
+    shout   — yelling or strong emphasis (jagged spiky starburst bubble)
+    whisper — quiet or secret speech (small oval, dashed border)
+    thought — internal monologue (cloud shape, dotted trail)
+    caption — narrator or scene text (rectangular box at panel edge)
+    sfx     — sound effects like BANG, CRASH (large bold stylized text)
+    """
 
 # %% ../nbs/00_models.ipynb #b5ab8a64
 class Panel(BaseModel):

@@ -1,4 +1,4 @@
-style_prefix: "manhua style, Chinese comic art, clean ink lines, vibrant flat colours, sharp details"
-negative_prompt: "photorealistic, 3d render, blurry, watermark, text, low quality, western comic style"
+style_prefix: "manhua style, Chinese comic illustration, flat color cel-shading, clean ink outlines, crisp 2D linework, vibrant flat colors, comic panel art, NOT photorealistic"
+negative_prompt: "photorealistic, hyperrealistic, 3d render, photography, realistic skin texture, subsurface scattering, oil painting, blurry, watermark, low quality, western comic style, CGI, cinematic"
 panel_template: "{style_prefix}, {location_prompt}, {character_prompts}, {action}, {mood}"
 character_sheet_template: "{style_prefix}, character reference sheet, full body, front and side view, neutral white background, {character_description}, model sheet"

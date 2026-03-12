@@ -5,6 +5,7 @@
 # %% ../nbs/10_pipeline.ipynb #cell-3
 from __future__ import annotations
 import asyncio
+import time
 from pathlib import Path
 
 from rich.console import Console
@@ -74,30 +75,52 @@ def run(
     llm = LLMClient(config.llm, templates)
     renderer = get_renderer(config.renderer.model, config.renderer)
 
+    total_steps = 3 + (1 if config.run_validation else 0) + (1 if renderer.model_spec.capabilities.reference_images else 0)
+    step = 0
+
+    def _step(label: str) -> float:
+        nonlocal step
+        step += 1
+        _console.print(f"[bold][{step}/{total_steps}][/bold] {label}")
+        return time.monotonic()
+
+    def _done(t0: float, detail: str = "") -> None:
+        elapsed = time.monotonic() - t0
+        suffix = f"  [dim]{detail}[/dim]" if detail else ""
+        _console.print(f"    [green]done[/green] in {elapsed:.1f}s{suffix}")
+
     _console.print(Rule(f"[bold]manhualizer[/bold] — {story_path.name}"))
     _console.print(f"  model: [cyan]{config.renderer.model}[/cyan]  "
                    f"template: [cyan]{config.template}[/cyan]  "
                    f"output: [cyan]{output_dir}[/cyan]")
 
     # ── Step 1: Analyze ──────────────────────────────────────────────────────
+    t0 = _step("Analyzing story…")
     analysis = analyze_story(
         story_text, llm, config, output_dir / "analysis.json"
     )
+    _done(t0, f"{len(analysis.characters)} character(s), {len(analysis.locations)} location(s)")
 
     # ── Step 2: Storyboard ───────────────────────────────────────────────────
+    t0 = _step("Building storyboard…")
     storyboard = build_storyboard(
         story_text, analysis, llm, templates, config, output_dir / "storyboard.json"
     )
+    panel_count = len(storyboard.all_panels)
+    _done(t0, f"{len(storyboard.scenes)} scene(s), {panel_count} panel(s)")
 
     # ── Step 3: Validate (optional) ──────────────────────────────────────────
     validation_path: Path | None = None
     if config.run_validation:
+        t0 = _step("Validating storyboard…")
         validation_path = output_dir / "validation.json"
         validate_storyboard(story_text, storyboard, llm, config, validation_path)
+        _done(t0)
 
     # ── Step 4: Character sheets (capability-gated) ───────────────────────────
     character_sheets: dict[str, Path] = {}
     if renderer.model_spec.capabilities.reference_images:
+        t0 = _step("Generating character sheets…")
         character_sheets = asyncio.run(
             generate_character_sheets_async(
                 analysis, renderer,
@@ -105,8 +128,10 @@ def run(
                 templates, config,
             )
         )
+        _done(t0, f"{len(character_sheets)} sheet(s)")
 
     # ── Step 5: Render panels ─────────────────────────────────────────────────
+    t0 = _step(f"Rendering {panel_count} panel(s)…")
     panels_dir = output_dir / "panels"
     render_results = asyncio.run(
         renderer.render_batch_async(
@@ -117,6 +142,7 @@ def run(
             resume=config.resume,
         )
     )
+    _done(t0)
 
     result = ComicOutput(
         output_dir=output_dir,

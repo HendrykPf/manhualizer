@@ -18,7 +18,7 @@ analyze_prompt: |
         "arcs": [
           {"phase": "beginning|middle|end", "description": "how they change or what state they are in"}
         ],
-        "reference_image_prompt": "a stable, compact prompt fragment (15-25 words) describing this character visually — reused in every panel they appear in"
+        "reference_image_prompt": "a stable, compact prompt fragment (15-25 words) for this character — MUST include apparent age (e.g. '17-year-old girl', '45-year-old man'), build, hair color/style, eye color, and signature clothing. This string is copied verbatim into every panel prompt, so it must lock down age and appearance."
       }
     ],
     "locations": [

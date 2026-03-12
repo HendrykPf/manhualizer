@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .config import PipelineConfig
-from .llm import LLMClient
+from .llm import LLMClient, chunk_story
 from manhualizer.models import (
     DialogueBubble, Panel, Scene, Storyboard, StoryAnalysis,
 )
@@ -46,6 +46,14 @@ def _dialogue_instructions(panel_data: dict) -> str:
 
     Tells the image model to render text inside speech/thought/caption bubbles
     directly in the image so panels are self-contained for vertical scrolling.
+
+    Manhwa bubble visual guide:
+    - speech  → oval bubble, single pointed tail toward ONE speaker only
+    - shout   → jagged spiky starburst bubble, single tail toward ONE speaker only
+    - whisper → small oval bubble with dashed border, single tail toward ONE speaker only
+    - thought → cloud shape with dotted trail toward speaker
+    - caption → rectangular box with black border at top or bottom panel edge
+    - sfx     → large bold stylized sound effect text
     """
     dialogue = panel_data.get("dialogue", [])
     if not dialogue:
@@ -60,13 +68,32 @@ def _dialogue_instructions(panel_data: dict) -> str:
             continue
 
         if bubble == "caption" or speaker == "narration":
-            parts.append(f'narration box with text "{text}"')
+            parts.append(
+                f'rectangular narration box with black border and white background'
+                f', placed at the top or bottom edge of the panel, text: "{text}"'
+            )
+        elif bubble == "shout":
+            parts.append(
+                f'jagged spiky starburst-shaped shout bubble with thick black border and bold text'
+                f', single tail pointing only toward {speaker}, text: "{text}"'
+            )
+        elif bubble == "whisper":
+            parts.append(
+                f'small oval speech bubble with dashed border and small italic text'
+                f', single tail pointing only toward {speaker}, text: "{text}"'
+            )
         elif bubble == "thought":
-            parts.append(f'thought bubble from {speaker} saying "{text}"')
+            parts.append(
+                f'cloud-shaped thought bubble with dotted border trailing toward {speaker}'
+                f', text: "{text}"'
+            )
         elif bubble == "sfx":
-            parts.append(f'bold sound effect text "{text}"')
+            parts.append(f'large bold stylized sound effect text "{text}"')
         else:
-            parts.append(f'speech bubble from {speaker} saying "{text}"')
+            parts.append(
+                f'oval speech bubble with a single pointed tail directed only toward {speaker}'
+                f', white fill, black border, text: "{text}"'
+            )
 
     if not parts:
         return ""
@@ -209,8 +236,10 @@ def build_storyboard(
         _console.print(f"[dim]storyboard: resuming from {output_path}[/dim]")
         return Storyboard.model_validate_json(output_path.read_text())
 
-    # Use chunks from the analysis so chunking is consistent
-    chunks = analysis.source_chunks or [story_text]
+    # Re-chunk the story with a tighter budget so each scene covers ~800 words.
+    # This keeps the JSON response small enough to fit within LLM max_tokens.
+    # (analyze may use larger chunks; storyboard needs smaller ones.)
+    chunks = chunk_story(story_text, max_tokens=config.storyboard_chunk_tokens)
     char_prompts = _character_lookup(analysis)
     loc_prompts = _location_lookup(analysis)
     analysis_json = analysis.model_dump_json(indent=2, exclude_none=True)
@@ -234,10 +263,10 @@ def build_storyboard(
                 "storyboard.yml",
                 "storyboard_prompt",
                 as_json=True,
+                max_tokens=16384,
                 story_chunk=chunk,
                 analysis=analysis_json,
                 style_prefix=templates.style_prefix,
-                panels_per_scene=config.panels_per_scene,
                 scene_number=i + 1,
             )
             scene = _parse_scene(

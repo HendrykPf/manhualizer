@@ -40,7 +40,7 @@ class LLMConfig(BaseModel):
     """
     model: str = "anthropic/claude-sonnet-4-6"
     temperature: float = 0.7
-    max_tokens: int = 8192
+    max_tokens: int = 16384
 
 # %% ../nbs/01_config.ipynb #7961791d
 class LoRAConfig(BaseModel):
@@ -121,8 +121,11 @@ class PipelineConfig(BaseModel):
     """Name of the prompt template set to use (built-in or from custom_templates_dir)."""
     custom_templates_dir: str | None = None
     """Path to a directory of custom template YAML files."""
-    panels_per_scene: int = 4
     max_chunk_tokens: int = 3000
+    storyboard_chunk_tokens: int = 1200
+    """Max tokens per story chunk when building a storyboard scene.
+    Smaller values → more scenes, fewer panels per scene, smaller LLM responses.
+    ~1200 tokens ≈ 800 words ≈ 8–12 panels — safe within a single LLM response."""
     run_validation: bool = False
     """Run the optional LLM validation step (adds latency and cost)."""
     resume: bool = True

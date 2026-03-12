@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from rich.console import Console
+from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeElapsedColumn
 
 from .config import OutputConfig, RendererConfig
 from .models import Panel, RenderResult
@@ -167,6 +168,7 @@ class BaseRenderer(ABC):
     ) -> list[RenderResult]:
         """Render all panels concurrently up to `concurrency` at a time.
 
+        Shows a live progress bar: panel N / total with elapsed time.
         If `resume` is True, panels whose output file already exists are
         skipped and a RenderResult pointing to the existing file is returned.
 
@@ -184,21 +186,34 @@ class BaseRenderer(ABC):
 
         sem = asyncio.Semaphore(concurrency)
 
-        async def _render_one(panel: Panel) -> RenderResult:
-            expected = output_dir / f"panel_{panel.panel_number:04d}.{output_cfg.format}"
-            if resume and expected.exists():
-                _console.print(f"[dim]render: skipping panel {panel.panel_number} (exists)[/dim]")
-                return RenderResult(
-                    panel_number=panel.panel_number,
-                    image_path=expected,
-                    backend_used=self.model_spec.name,
-                    prompt_used=panel.visual_prompt,
-                )
-            async with sem:
-                return await self.render_async(panel, output_dir, output_cfg, reference_images)
+        with Progress(
+            TextColumn("[bold cyan]render[/bold cyan]"),
+            BarColumn(),
+            TaskProgressColumn(),
+            TextColumn("panels"),
+            TimeElapsedColumn(),
+            console=_console,
+        ) as progress:
+            task = progress.add_task("", total=len(panels))
 
-        tasks = [_render_one(p) for p in panels]
-        results = await asyncio.gather(*tasks, return_exceptions=False)
+            async def _render_one(panel: Panel) -> RenderResult:
+                expected = output_dir / f"panel_{panel.panel_number:04d}.{output_cfg.format}"
+                if resume and expected.exists():
+                    progress.advance(task)
+                    return RenderResult(
+                        panel_number=panel.panel_number,
+                        image_path=expected,
+                        backend_used=self.model_spec.name,
+                        prompt_used=panel.visual_prompt,
+                    )
+                async with sem:
+                    result = await self.render_async(panel, output_dir, output_cfg, reference_images)
+                    progress.advance(task)
+                    return result
+
+            tasks = [_render_one(p) for p in panels]
+            results = await asyncio.gather(*tasks, return_exceptions=False)
+
         return list(results)
 
 # %% ../nbs/07_render.ipynb #cell-12

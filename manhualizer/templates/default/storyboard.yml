@@ -15,12 +15,30 @@ storyboard_prompt: |
   Style: {style_prefix}
 
   Rules:
-  - Generate {panels_per_scene} panels for this excerpt (adjust slightly if the story beat demands it)
+  - Use as many panels as the story beat genuinely needs — no fixed limit. Ask yourself: "would a reader understand how we got from A to B?"
+  - Show transitions: if a character moves from one place to another, show the journey (walking, travelling, searching) — do NOT jump directly from departure to arrival
+  - Show cause and effect step by step: if something is found, discovered, or changes, show each step that leads to it, not just the result
+  - A single close-up can express one strong emotion in one panel; a fight, chase, or journey through an environment needs several panels to feel real
   - Every panel needs a complete, ready-to-use image generation prompt in `visual_prompt`
   - Build `visual_prompt` by combining: style prefix + location prompt + character prompts (for characters present) + action + mood + camera angle
   - `characters_present` must match character names exactly as they appear in the analysis
   - Dialogue should be concise — this is a comic, not a novel
   - Vary camera angles for dynamic pacing
+  - Character appearance consistency: use the character's reference_image_prompt EXACTLY as given — do NOT alter age, hair, build, or clothing unless the story explicitly describes a time skip or physical transformation
+  - If the story says "X years later" or a character visibly ages/changes, update their description for that scene only and note it in action_description
+
+  Dialogue bubble types (manhwa conventions):
+  - "speech":  normal spoken dialogue → oval bubble, single pointed tail toward ONE speaker
+  - "shout":   yelling, screaming, angry outburst, strong emphasis → jagged spiky starburst bubble, single tail toward ONE speaker
+  - "whisper": quiet, secret, or hesitant speech → small oval bubble with dashed border, single tail toward ONE speaker
+  - "thought": internal monologue, unspoken feelings → cloud-shaped bubble with dotted trail toward speaker
+  - "caption": narrator voice, scene-setting text, time passing, ANY text NOT spoken by a character → rectangular box at panel edge
+  - "sfx":     sound effects (BANG, CRASH, WHOOSH, etc.) → large bold stylized text, no bubble
+
+  CRITICAL bubble rules:
+  - Each dialogue entry must have EXACTLY ONE character name as speaker — never two names, never "Character A and Character B"
+  - If multiple characters say the same thing at the same time, create one entry PER character with the same text
+  - Use "caption" (not "speech") for any narration or storytelling text
 
   Return a JSON object:
   {
@@ -38,7 +56,7 @@ storyboard_prompt: |
         "mood": "tense|peaceful|dramatic|comedic|melancholic|action|romantic",
         "camera_angle": "close-up|medium shot|wide shot|over-the-shoulder|bird's eye|low angle|dutch angle",
         "dialogue": [
-          {"speaker": "character name or 'narration'", "text": "...", "bubble_type": "speech|thought|caption|sfx"}
+          {"speaker": "exactly ONE character name, or 'narration'", "text": "...", "bubble_type": "speech|shout|whisper|thought|caption|sfx"}
         ]
       }
     ]
