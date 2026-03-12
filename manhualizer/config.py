@@ -34,11 +34,15 @@ class OutputConfig(BaseModel):
 # %% ../nbs/01_config.ipynb #bddf69af
 class LLMConfig(BaseModel):
     """LLM settings. Model string uses litellm format: 'provider/model'.
-    
-    API keys are **not** stored here — they are read from environment variables
-    (ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY, etc.).
+
+    API keys are read from environment variables — never stored here.
+    Common choices:
+    - "openrouter/moonshotai/kimi-k2"   → OPENROUTER_API_KEY  (default, best value)
+    - "anthropic/claude-sonnet-4-6"     → ANTHROPIC_API_KEY   (high quality)
+    - "anthropic/claude-haiku-4-5-20251001" → ANTHROPIC_API_KEY (fastest/cheapest)
+    - "openai/gpt-4o"                   → OPENAI_API_KEY
     """
-    model: str = "anthropic/claude-sonnet-4-6"
+    model: str = "openrouter/moonshotai/kimi-k2"
     temperature: float = 0.7
     max_tokens: int = 16384
 
