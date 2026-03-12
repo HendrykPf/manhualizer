@@ -131,6 +131,7 @@ class PipelineConfig(BaseModel):
     resume: bool = True
     """Skip steps whose output files already exist."""
 
+
 # %% ../nbs/01_config.ipynb #56d37f4a
 def load_config(path: Path | str | None = None, **overrides) -> PipelineConfig:
     """Load PipelineConfig from a YAML file, then apply any keyword overrides.

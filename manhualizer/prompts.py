@@ -24,7 +24,7 @@ except NameError:
 # %% ../nbs/02_prompts.ipynb #cell-5
 class TemplateSet:
     """A loaded set of prompt templates from one directory.
-
+    
     Template files are YAML. String values support `{variable}` substitution
     via `render(key, **vars)`. Missing variables leave the placeholder intact.
 
