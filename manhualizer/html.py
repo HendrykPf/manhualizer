@@ -4,9 +4,11 @@
 
 # %% ../nbs/12_html.ipynb #234a8883
 from __future__ import annotations
+import math
+import re
 from pathlib import Path
 
-from .models import ComicOutput, Storyboard
+from .models import ComicOutput, DialogueBubble, Storyboard
 
 # %% auto #0
 __all__ = ['generate_html_viewer']
@@ -15,6 +17,8 @@ __all__ = ['generate_html_viewer']
 _CSS = """
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html { scroll-behavior: smooth; }
+
 body {
     background: #0d0d0d;
     color: #e0e0e0;
@@ -22,57 +26,74 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 2rem 1rem 4rem;
-    gap: 0;
 }
 
-header {
+/* ── Story cover ───────────────────────────────────────────────────────────── */
+.cover {
     width: 100%;
     max-width: 620px;
     text-align: center;
-    padding-bottom: 2rem;
-    border-bottom: 1px solid #2a2a2a;
-    margin-bottom: 2rem;
+    padding: 4.5rem 2rem 3.5rem;
+    border-bottom: 1px solid #1a1a1a;
 }
 
-header h1 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
+.cover .story-title {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: #f0f0f0;
+    line-height: 1.2;
 }
 
-header p {
-    font-size: 0.75rem;
-    color: #555;
-    margin-top: 0.4rem;
-    letter-spacing: 0.05em;
+.cover .story-meta {
+    font-size: 0.68rem;
+    color: #3a3a3a;
+    margin-top: 1rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
 }
 
-.scene-title {
+/* ── Chapter title card ────────────────────────────────────────────────────── */
+.chapter-card {
     width: 100%;
     max-width: 620px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #444;
-    padding: 1.8rem 0 0.6rem;
+    padding: 3.5rem 2rem 3rem;
+    text-align: center;
+    background: #0d0d0d;
     border-top: 1px solid #1e1e1e;
-    margin-top: 1rem;
 }
 
-.scene-title.first {
+.chapter-card.first {
     border-top: none;
-    margin-top: 0;
-    padding-top: 0;
+    padding-top: 3rem;
 }
 
+.chapter-card .ch-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: #484848;
+    margin-bottom: 0.9rem;
+}
+
+.chapter-card .ch-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #dcdcdc;
+    letter-spacing: 0.04em;
+    line-height: 1.25;
+}
+
+/* ── Panels: seamless vertical strip ──────────────────────────────────────── */
 .panel {
     width: 100%;
     max-width: 620px;
-    display: block;
+    display: grid;   /* stacks img + SVG in same cell */
+}
+
+.panel > * {
+    grid-area: 1 / 1;
 }
 
 .panel img {
@@ -81,13 +102,312 @@ header p {
     display: block;
 }
 
+.panel svg.bubbles {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+}
+
+/* ── End-of-chapter rule ───────────────────────────────────────────────────── */
+.chapter-end {
+    width: 100%;
+    max-width: 620px;
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 2.2rem 0;
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #252525;
+}
+
+.chapter-end::before,
+.chapter-end::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #1c1c1c;
+}
+
+/* ── Footer ────────────────────────────────────────────────────────────────── */
 footer {
-    margin-top: 3rem;
-    font-size: 0.65rem;
-    color: #333;
-    letter-spacing: 0.06em;
+    padding: 3rem 0 5rem;
+    font-size: 0.6rem;
+    color: #2a2a2a;
+    letter-spacing: 0.08em;
 }
 """
+
+# ---------------------------------------------------------------------------
+# SVG bubble rendering
+# ---------------------------------------------------------------------------
+
+# Named positions → (cx, cy) in a 0–100 viewBox coordinate space
+_POS_CX_CY: dict[str, tuple[float, float]] = {
+    "top-left":      (24.0, 17.0),
+    "top-center":    (50.0,  9.0),
+    "top-right":     (76.0, 17.0),
+    "middle-left":   (19.0, 50.0),
+    "middle-right":  (81.0, 50.0),
+    "bottom-left":   (24.0, 83.0),
+    "bottom-center": (50.0, 91.0),
+    "bottom-right":  (76.0, 83.0),
+}
+
+# Fallback auto-positions assigned by index when no position hint given
+_AUTO_POS = [
+    "top-left", "top-right", "top-center",
+    "bottom-left", "bottom-right",
+    "middle-left", "middle-right",
+    "bottom-center",
+]
+
+# Time-stamp patterns for caption sub-typing.
+# Match anywhere in the text (not anchored) so "Three days later…" is caught.
+_TIME_RE = re.compile(
+    r"(?:\d+\s+|\w+\s+)?(?:day|week|month|year|hour|minute)s?\s+later"
+    r"|meanwhile"
+    r"|the next (?:day|morning|night|evening)"
+    r"|later that (?:day|night|morning|evening)"
+    r"|some time later"
+    r"|moments? later"
+    r"|soon after(?:wards?)?"
+    r"|at (?:dawn|dusk|noon|midnight)"
+    r"|the following (?:day|morning|night|week)"
+    r"|years? later|weeks? later|days? later|months? later",
+    re.IGNORECASE,
+)
+
+
+def _wrap(text: str, limit: int = 20) -> list[str]:
+    """Word-wrap text to lines of at most `limit` characters."""
+    words = text.split()
+    lines: list[str] = []
+    cur = ""
+    for w in words:
+        candidate = f"{cur} {w}".strip()
+        if len(candidate) > limit and cur:
+            lines.append(cur)
+            cur = w
+        else:
+            cur = candidate
+    if cur:
+        lines.append(cur)
+    return lines or [""]
+
+
+def _tspans(lines: list[str], cx: float, lh: float, italic: bool = False) -> str:
+    """Build <tspan> elements for multi-line SVG text.
+
+    The parent <text> element must have y= set to the first-line baseline.
+    Subsequent lines use dy= to advance.
+    """
+    style = ' font-style="italic"' if italic else ""
+    parts = []
+    for i, line in enumerate(lines):
+        dy = f' dy="{lh:.2f}"' if i > 0 else ""
+        parts.append(f'<tspan x="{cx:.1f}"{dy}{style}>{_esc(line)}</tspan>')
+    return "".join(parts)
+
+
+def _resolve_pos(pos: str | None, idx: int) -> tuple[float, float]:
+    if pos and pos in _POS_CX_CY:
+        return _POS_CX_CY[pos]
+    return _POS_CX_CY[_AUTO_POS[idx % len(_AUTO_POS)]]
+
+
+def _tail_dir(pos: str | None) -> str:
+    if not pos:
+        return "down"
+    if "top" in pos:
+        return "down"
+    if "bottom" in pos:
+        return "up"
+    if "left" in pos:
+        return "right"
+    return "left"
+
+
+def _oval_tail(cx: float, cy: float, rx: float, ry: float, tail_dir: str) -> str:
+    """Triangular tail pointing away from the bubble."""
+    if tail_dir == "down":
+        pts = f"{cx - 1.8:.1f},{cy + ry:.1f} {cx + 1.8:.1f},{cy + ry:.1f} {cx:.1f},{cy + ry + 6:.1f}"
+    elif tail_dir == "up":
+        pts = f"{cx - 1.8:.1f},{cy - ry:.1f} {cx + 1.8:.1f},{cy - ry:.1f} {cx:.1f},{cy - ry - 6:.1f}"
+    elif tail_dir == "right":
+        pts = f"{cx + rx:.1f},{cy - 1.8:.1f} {cx + rx:.1f},{cy + 1.8:.1f} {cx + rx + 6:.1f},{cy:.1f}"
+    else:
+        pts = f"{cx - rx:.1f},{cy - 1.8:.1f} {cx - rx:.1f},{cy + 1.8:.1f} {cx - rx - 6:.1f},{cy:.1f}"
+    return f'<polygon points="{pts}" fill="white" stroke="black" stroke-width="0.5"/>'
+
+
+def _speech_svg(cx: float, cy: float, rx: float, ry: float,
+                lines: list[str], fs: float, lh: float, ty: float,
+                tail_dir: str, bold: bool = False) -> str:
+    """Round oval bubble (speech / shout / whisper) — always solid black border."""
+    sw = "0.7" if bold else "0.5"
+    weight = ' font-weight="bold"' if bold else ""
+    # Tail first, ellipse on top covers the tail base
+    return (
+        _oval_tail(cx, cy, rx, ry, tail_dir)
+        + f'\n<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{rx:.1f}" ry="{ry:.1f}"'
+        f' fill="white" stroke="black" stroke-width="{sw}"/>'
+        f'\n<text y="{ty:.1f}" text-anchor="middle" font-size="{fs}"{weight} fill="black">'
+        f'{_tspans(lines, cx, lh)}</text>'
+    )
+
+
+def _thought_svg(cx: float, cy: float, rx: float, ry: float,
+                 lines: list[str], fs: float, lh: float, ty: float) -> str:
+    """Round oval with light dashed stroke — visually distinct from speech."""
+    return (
+        f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{rx:.1f}" ry="{ry:.1f}"'
+        f' fill="white" stroke="#555" stroke-width="0.5" stroke-dasharray="2,1.2"/>'
+        f'\n<text y="{ty:.1f}" text-anchor="middle" font-size="{fs}"'
+        f' font-style="italic" fill="#222">'
+        f'{_tspans(lines, cx, lh, italic=True)}</text>'
+    )
+
+
+def _caption_svg(text: str, pos: str | None, caption_count: list[int]) -> str:
+    """Full-width rectangular caption box. Time-stamps get a banner style."""
+    is_time = bool(_TIME_RE.match(text))
+    lines = _wrap(text, limit=40)
+    n = len(lines)
+    fs = 3.0
+    lh = fs * 1.4
+    pad = 1.8
+    h = n * lh + pad * 2
+
+    # Determine vertical placement
+    cnt = caption_count[0]
+    caption_count[0] += 1
+    at_top = (cnt == 0) or (pos and "top" in pos)
+    ry_start = 1.5 if at_top else 100.0 - h - 1.5
+    ty = ry_start + pad + fs * 0.85
+
+    if is_time:
+        # Prominent banner: dark background, white text, double border
+        return (
+            f'<rect x="5" y="{ry_start:.1f}" width="90" height="{h:.1f}"'
+            f' fill="#1a1a1a" stroke="white" stroke-width="0.6" rx="0.8"/>'
+            f'\n<rect x="5.5" y="{ry_start + 0.5:.1f}" width="89" height="{h - 1:.1f}"'
+            f' fill="none" stroke="white" stroke-width="0.25" rx="0.5"/>'
+            f'\n<text y="{ty:.1f}" text-anchor="middle" font-size="{fs}"'
+            f' font-style="italic" fill="white">'
+            f'{_tspans(lines, 50.0, lh)}</text>'
+        )
+    else:
+        return (
+            f'<rect x="1.5" y="{ry_start:.1f}" width="97" height="{h:.1f}"'
+            f' fill="white" stroke="black" stroke-width="0.5" rx="0.5"/>'
+            f'\n<text y="{ty:.1f}" text-anchor="middle" font-size="{fs}" fill="black">'
+            f'{_tspans(lines, 50.0, lh)}</text>'
+        )
+
+
+def _sfx_svg(text: str, pos: str | None, idx: int) -> str:
+    cx, cy = _resolve_pos(pos, idx)
+    lines = _wrap(text, limit=15)
+    n = len(lines)
+    fs = 7.0
+    lh = fs * 1.2
+    ty = cy - (n * lh / 2) + fs * 0.85
+    return (
+        f'<text y="{ty:.1f}" text-anchor="middle" font-size="{fs}"'
+        f' font-weight="900" fill="white" stroke="black" stroke-width="0.6"'
+        f' font-family="Impact,sans-serif">'
+        f'{_tspans(lines, cx, lh)}</text>'
+    )
+
+
+def _bubble_wrap_limit(text: str) -> int:
+    """Choose chars-per-line so the bubble stays wide rather than tall.
+
+    Targets ~2–5 lines depending on text length. A 20% buffer compensates
+    for word-boundary waste so the actual line count stays near the target.
+    Always between 18 and 38 chars per line.
+    """
+    n_chars = len(text)
+    if n_chars <= 40:
+        target = 2
+    elif n_chars <= 80:
+        target = 3
+    elif n_chars <= 140:
+        target = 4
+    else:
+        target = 5
+    per_line = math.ceil(n_chars / target * 1.2)
+    return max(18, min(38, per_line))
+
+
+def _bubble_fragment(b: DialogueBubble, non_caption_idx: int,
+                     caption_count: list[int]) -> str:
+    """Return the SVG fragment for one dialogue bubble."""
+    btype = b.bubble_type
+    pos = b.position
+
+    if btype == "caption":
+        return _caption_svg(b.text, pos, caption_count)
+
+    if btype == "sfx":
+        return _sfx_svg(b.text, pos, non_caption_idx)
+
+    cx, cy = _resolve_pos(pos, non_caption_idx)
+    limit = _bubble_wrap_limit(b.text)
+    lines = _wrap(b.text, limit=limit)
+    n = len(lines)
+    fs = 3.2
+    lh = fs * 1.35
+    max_chars = max(len(l) for l in lines)
+    rx = max_chars * fs * 0.27 + 2.5
+    ry = n * lh / 2 + 2.0
+    ty = cy - n * lh / 2 + fs * 0.88
+
+    if btype == "thought":
+        return _thought_svg(cx, cy, rx, ry, lines, fs, lh, ty)
+    elif btype == "shout":
+        return _speech_svg(cx, cy, rx, ry, lines, fs, lh, ty, _tail_dir(pos), bold=True)
+    else:  # speech / whisper — same round oval, solid black border
+        return _speech_svg(cx, cy, rx, ry, lines, fs, lh, ty, _tail_dir(pos))
+
+
+def _panel_bubbles_svg(panel) -> str:
+    """Build the full SVG overlay for one panel's dialogue bubbles.
+
+    Returns an empty string when there are no dialogue entries.
+    """
+    if not panel.dialogue:
+        return ""
+
+    caption_count: list[int] = [0]
+    non_caption_idx = 0
+    fragments: list[str] = []
+
+    for b in panel.dialogue:
+        frag = _bubble_fragment(b, non_caption_idx, caption_count)
+        if b.bubble_type not in ("caption",):
+            non_caption_idx += 1
+        fragments.append(frag)
+
+    inner = "\n".join(fragments)
+    return (
+        f'<svg class="bubbles" viewBox="0 0 100 100" preserveAspectRatio="none">'
+        f'\n{inner}\n</svg>'
+    )
+
+
+# ---------------------------------------------------------------------------
+# Main HTML generation
+# ---------------------------------------------------------------------------
+
+def _chapter_number(scene_id: str, fallback_idx: int) -> int:
+    """Extract chapter number from scene_id like 's1', 's2', or fall back to index+1."""
+    import re as _re
+    m = _re.search(r"\d+", scene_id)
+    return int(m.group()) if m else fallback_idx + 1
 
 
 def generate_html_viewer(
@@ -99,6 +419,7 @@ def generate_html_viewer(
 
     The page is a self-contained vertical-scroll reader styled for manhua.
     Images are referenced by relative path so the directory is portable.
+    Speech bubbles are rendered as SVG overlays on each panel image.
     """
     panels_dir = output.output_dir / "panels"
     panel_map = (
@@ -107,29 +428,47 @@ def generate_html_viewer(
     )
 
     rows: list[str] = []
+    n_scenes = len(storyboard.scenes)
+    panel_count = 0
+
     for scene_idx, scene in enumerate(storyboard.scenes):
-        scene_label = scene.title or f"Scene {scene.scene_id}"
-        first_cls = ' class="scene-title first"' if scene_idx == 0 else ' class="scene-title"'
-        rows.append(f'  <p{first_cls}>{_esc(scene_label)}</p>')
+        # Chapter number: parse from scene_id ("s1" → 1) or fall back to index+1
+        ch_num = _chapter_number(scene.scene_id, scene_idx)
+        ch_label = f"Chapter {ch_num}"
+        ch_title = _esc(scene.title) if scene.title else ch_label
+        card_cls = "chapter-card first" if scene_idx == 0 else "chapter-card"
+
+        rows.append(
+            f'  <div class="{card_cls}">'
+            f'<p class="ch-label">{ch_label}</p>'
+            f'<h2 class="ch-title">{ch_title}</h2>'
+            f'</div>'
+        )
+
         for panel in scene.panels:
             key = f"panel_{panel.panel_number:04d}"
             img_path = panel_map.get(key)
             if img_path is None:
                 continue
             rel = img_path.relative_to(output.output_dir)
+            svg = _panel_bubbles_svg(panel)
             rows.append(
                 f'  <div class="panel">'
                 f'<img src="{rel}" alt="Panel {panel.panel_number}" loading="lazy">'
+                f'{svg}'
                 f'</div>'
             )
+            panel_count += 1
 
-    panel_count = sum(1 for r in rows if 'class="panel"' in r)
-    n_scenes = len(storyboard.scenes)
-    subtitle = (
-        f"{n_scenes} scene{'s' if n_scenes != 1 else ''}"
+        # End-of-chapter divider (skip after last scene)
+        if scene_idx < n_scenes - 1:
+            rows.append(f'  <div class="chapter-end">End of Chapter {ch_num}</div>')
+
+    display_title = _esc(title) if title else "Comic"
+    meta = (
+        f"{n_scenes} chapter{'s' if n_scenes != 1 else ''}"
         f" &middot; {panel_count} panel{'s' if panel_count != 1 else ''}"
     )
-    display_title = _esc(title) if title else "Comic"
 
     html = (
         '<!DOCTYPE html>\n'
@@ -141,10 +480,10 @@ def generate_html_viewer(
         f'  <style>{_CSS}</style>\n'
         '</head>\n'
         '<body>\n'
-        '  <header>\n'
-        f'    <h1>{display_title}</h1>\n'
-        f'    <p>{subtitle}</p>\n'
-        '  </header>\n'
+        f'  <div class="cover">'
+        f'<p class="story-title">{display_title}</p>'
+        f'<p class="story-meta">{meta}</p>'
+        f'</div>\n'
         + '\n'.join(rows) + '\n'
         '  <footer>generated by manhualizer</footer>\n'
         '</body>\n'

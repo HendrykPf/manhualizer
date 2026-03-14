@@ -26,7 +26,7 @@ _console = Console()
 
 
 # %% auto #0
-__all__ = ['run', 'run_analyze_only', 'run_storyboard_only', 'run_render_only']
+__all__ = ['run', 'run_analyze_only', 'run_storyboard_only', 'run_render_only', 'run_html_only']
 
 # %% ../nbs/10_pipeline.ipynb #cell-4
 def _output_dir(config: PipelineConfig, story_path: Path) -> Path:
@@ -238,9 +238,55 @@ def run_render_only(
             resume=config.resume,
         )
     )
-    return ComicOutput(
+    result = ComicOutput(
         output_dir=output_dir,
         analysis_path=analysis_path,
         storyboard_path=storyboard_path,
         rendered_panels=render_results,
     )
+    result.html_path = generate_html_viewer(result, storyboard, title=analysis.title)
+    return result
+
+
+def run_html_only(
+    story_path: str | Path,
+    config: PipelineConfig | None = None,
+) -> Path:
+    """Regenerate index.html from existing analysis.json + storyboard.json + panels/.
+
+    Use this after a render to refresh the HTML viewer without re-running any
+    expensive steps (no LLM calls, no image generation).
+
+    Args:
+        story_path: Path to the original story text file (used to locate output dir).
+        config: PipelineConfig. If None, defaults are used.
+
+    Returns:
+        Path to the written index.html.
+    """
+    story_path = Path(story_path)
+    if config is None:
+        from manhualizer.config import load_config
+        config = load_config()
+
+    output_dir = _output_dir(config, story_path)
+    analysis_path = output_dir / "analysis.json"
+    storyboard_path = output_dir / "storyboard.json"
+
+    for p in (analysis_path, storyboard_path):
+        if not p.exists():
+            raise FileNotFoundError(
+                f"{p} not found. Run `manhualizer storyboard-only` first."
+            )
+
+    analysis = StoryAnalysis.model_validate_json(analysis_path.read_text())
+    storyboard = Storyboard.model_validate_json(storyboard_path.read_text())
+
+    result = ComicOutput(
+        output_dir=output_dir,
+        analysis_path=analysis_path,
+        storyboard_path=storyboard_path,
+    )
+    html_path = generate_html_viewer(result, storyboard, title=analysis.title)
+    _console.print(f"[green]HTML viewer regenerated:[/green] {html_path}")
+    return html_path

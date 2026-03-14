@@ -5,7 +5,7 @@
 # %% ../nbs/00_models.ipynb #9b165026
 from __future__ import annotations
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 # %% auto #0
@@ -66,6 +66,13 @@ class DialogueBubble(BaseModel):
     thought — internal monologue (cloud shape, dotted trail)
     caption — narrator or scene text (rectangular box at panel edge)
     sfx     — sound effects like BANG, CRASH (large bold stylized text)
+    """
+    position: Optional[str] = None
+    """
+    Hint for SVG bubble placement. One of:
+    top-left | top-center | top-right | middle-left | middle-right |
+    bottom-left | bottom-center | bottom-right
+    Omit (null) to let the renderer auto-assign based on index and type.
     """
 
 # %% ../nbs/00_models.ipynb #b5ab8a64

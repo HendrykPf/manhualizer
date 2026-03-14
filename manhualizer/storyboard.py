@@ -140,16 +140,11 @@ def _assemble_visual_prompt(
     mood = panel_data.get("mood", "")
     camera = panel_data.get("camera_angle", "")
 
-    dialogue_part = _dialogue_instructions(panel_data)
-
     style_prefix = templates.style_prefix
-    # Weave bubbles in after action, before mood/camera
     core_parts = [p for p in [style_prefix, location_prompt, character_prompts, action] if p]
     base = ", ".join(core_parts)
-    if dialogue_part:
-        base = f"{base}. {dialogue_part}"
     tail = ", ".join(p for p in [mood, camera] if p)
-    return f"{base} {tail}".strip() if tail else base
+    return f"{base}, {tail}" if tail else base
 
 # %% ../nbs/05_storyboard.ipynb #cell-7
 def _parse_panel(
@@ -165,6 +160,7 @@ def _parse_panel(
             speaker=d.get("speaker", ""),
             text=d.get("text", ""),
             bubble_type=d.get("bubble_type", "speech"),
+            position=d.get("position"),
         )
         for d in data.get("dialogue", [])
     ]

@@ -22,7 +22,7 @@ app = typer.Typer(
 _console = Console()
 
 # %% auto #0
-__all__ = ['app', 'convert', 'analyze_only', 'storyboard_only', 'render_only', 'list_models_cmd', 'main']
+__all__ = ['app', 'convert', 'analyze_only', 'storyboard_only', 'render_only', 'html_only', 'list_models_cmd', 'main']
 
 # %% ../nbs/11_cli.ipynb #cell-4
 def _load(config_path, model, template, output_dir, fmt, width, height, aspect_ratio,
@@ -129,6 +129,22 @@ def render_only(
     from manhualizer.pipeline import run_render_only
     result = run_render_only(story, cfg)
     _console.print(f"[green]Render complete:[/green] {len(result.rendered_panels)} panel(s) → {result.output_dir}")
+
+
+@app.command(name="html-only")
+def html_only(
+    story:  Annotated[Path,           typer.Argument(help="Path to the story text file.")],
+    config: Annotated[Optional[Path], typer.Option("--config", "-c", help="Path to manhualizer.yml.")] = None,
+    output: Annotated[Optional[str],  typer.Option("--output", "-o", help="Output directory.")] = None,
+):
+    """Regenerate index.html from existing storyboard.json + rendered panels (no LLM or image calls)."""
+    from dotenv import load_dotenv; load_dotenv()
+    from manhualizer.config import load_config
+    from manhualizer.pipeline import run_html_only
+    overrides = {"output_dir": output} if output else {}
+    cfg = load_config(config, **overrides)
+    path = run_html_only(story, cfg)
+    _console.print(f"[green]Done:[/green] {path}")
 
 
 @app.command(name="models")
