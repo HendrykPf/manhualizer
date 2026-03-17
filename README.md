@@ -62,4 +62,108 @@ Pages](https://HendrykPf.github.io/manhualizer/).
 
 ## How to use
 
-*(Coming soon)*
+### Requirements
+
+- A running [ComfyUI](https://github.com/comfyanonymous/ComfyUI) server (configured in `manhualizer.yml`)
+- An LLM API key (e.g. `ANTHROPIC_API_KEY`) in your environment or a `.env` file
+- A `manhualizer.yml` config file in your working directory (see below)
+
+### Minimal `manhualizer.yml`
+
+```yaml
+renderer:
+  model: comfyui
+  comfyui:
+    base_url: "http://192.168.178.42:8188"
+    workflow_template_path: "./workflows/TextToImage.json"
+    speech_bubble_workflow_path: "./workflows/SpeachBubble.json"
+    poll_interval: 2.0
+    timeout: 300.0
+
+output:
+  aspect_ratio: "9:16"
+```
+
+### Full workflow
+
+```sh
+# 1. Full pipeline: analyze story → storyboard → render all panels
+manhualizer convert story.txt
+
+# 2. Add speech bubbles on top of the rendered panels
+manhualizer speech-bubbles story.txt
+
+# 3. View the result
+open story_comic/index.html
+```
+
+Output is saved to `<story_name>_comic/`:
+- `analysis.json` — extracted characters, locations, themes
+- `storyboard.json` — scene and panel breakdown with dialogue
+- `panels/panel_0001.png` … — rendered panel images
+- `index.html` — browser-readable comic viewer
+
+### Step-by-step commands
+
+Run individual pipeline steps if you want more control:
+
+```sh
+manhualizer analyze-only story.txt      # extract characters & locations only
+manhualizer storyboard-only story.txt   # analysis + storyboard (no images)
+manhualizer render-only story.txt       # render panels (requires storyboard)
+manhualizer speech-bubbles story.txt    # add speech bubbles to panels
+```
+
+All steps support **resume** — re-running a command skips already-completed
+panels. Use `--no-resume` to force everything from scratch.
+
+### Re-rendering specific panels
+
+If you are not happy with a panel, re-render just that panel without redoing everything:
+
+```sh
+# Re-render panel 16
+manhualizer render-only story.txt --panel 16
+
+# Re-render multiple panels
+manhualizer render-only story.txt --panel 3 --panel 16
+
+# Re-apply speech bubbles to a specific panel
+manhualizer speech-bubbles story.txt --panel 16
+```
+
+### All options
+
+| Command | Option | Description |
+|---|---|---|
+| `convert` | `--model`, `-m` | Image model to use |
+| `convert` | `--template`, `-t` | Prompt template (default, cinematic, noir) |
+| `convert` | `--output`, `-o` | Output directory |
+| `convert` | `--format`, `-f` | Image format: `png`, `jpg`, `webp` |
+| `convert` | `--aspect-ratio`, `-r` | e.g. `9:16` |
+| `convert` | `--lora`, `-l` | LoRA path/URL (repeatable) |
+| `convert` | `--validate` | Run optional LLM storyboard validation |
+| `convert` | `--no-resume` | Rerun all steps from scratch |
+| `render-only` | `--panel`, `-p` | Force re-render specific panel number(s) |
+| `speech-bubbles` | `--panel`, `-p` | Re-apply bubbles to specific panel number(s) |
+| `speech-bubbles` | `--no-resume` | Reprocess all panels |
+
+### Speech bubble types
+
+The storyboard assigns each line of dialogue a bubble type. The ComfyUI speech
+bubble workflow receives a descriptive visual prompt per type:
+
+| Type | Visual style |
+|---|---|
+| `speech` | Oval bubble, white fill, black border, pointed tail |
+| `shout` | Jagged spiky starburst, thick border, oversized bold text |
+| `whisper` | Small oval, dashed border, italic text, delicate tail |
+| `thought` | Cloud of linked oval puffs, dotted ellipsis trail |
+| `caption` | Rectangular box spanning panel width (narrator / time jumps) |
+| `sfx` | Oversized styled lettering, no bubble (BANG, CRASH, …) |
+
+### List available models
+
+```sh
+manhualizer models
+```

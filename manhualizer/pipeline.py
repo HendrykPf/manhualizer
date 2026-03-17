@@ -26,7 +26,7 @@ _console = Console()
 
 
 # %% auto #0
-__all__ = ['run', 'run_analyze_only', 'run_storyboard_only', 'run_render_only']
+__all__ = ['run', 'run_analyze_only', 'run_storyboard_only', 'run_render_only', 'run_speech_bubbles']
 
 # %% ../nbs/10_pipeline.ipynb #cell-4
 def _output_dir(config: PipelineConfig, story_path: Path) -> Path:
@@ -244,3 +244,65 @@ def run_render_only(
         storyboard_path=storyboard_path,
         rendered_panels=render_results,
     )
+
+
+def run_speech_bubbles(
+    story_path: str | Path,
+    config: PipelineConfig | None = None,
+) -> list:
+    """Apply speech bubbles to already-rendered panels via ComfyUI.
+
+    Requires ``panels/`` to exist (run the render step first).  Reads dialogue
+    data from ``storyboard.json``, runs the speech bubble workflow on each panel
+    that has dialogue, and overwrites the panel images in-place.
+
+    Args:
+        story_path: Path to the original story text file (used to locate the
+                    output directory).
+        config: PipelineConfig. Must have
+                ``renderer.comfyui.speech_bubble_workflow_path`` set.
+
+    Returns:
+        List of Path objects for every panel image that was updated.
+
+    Raises:
+        FileNotFoundError: If storyboard.json or the speech bubble workflow is
+                           missing.
+    """
+    story_path = Path(story_path)
+    if config is None:
+        from manhualizer.config import load_config
+        config = load_config()
+
+    output_dir = _output_dir(config, story_path)
+    storyboard_path = output_dir / "storyboard.json"
+    if not storyboard_path.exists():
+        raise FileNotFoundError(
+            f"{storyboard_path} not found. Run `manhualizer render-only` first."
+        )
+
+    storyboard = Storyboard.model_validate_json(storyboard_path.read_text())
+    panels_dir = output_dir / "panels"
+
+    from manhualizer.renderers.comfyui import ComfyUIRenderer
+    from manhualizer.render import MODELS
+    renderer = ComfyUIRenderer(MODELS["comfyui"], config.renderer)
+
+    _console.print(Rule("[bold]manhualizer[/bold] — add speech bubbles"))
+    _console.print(f"  workflow: [cyan]{config.renderer.comfyui.speech_bubble_workflow_path}[/cyan]")
+    _console.print(f"  panels:   [cyan]{panels_dir}[/cyan]")
+
+    t0 = time.monotonic()
+    updated = asyncio.run(
+        renderer.add_speech_bubbles_batch_async(
+            storyboard.all_panels,
+            panels_dir,
+            resume=config.resume,
+        )
+    )
+    elapsed = time.monotonic() - t0
+    _console.print(Rule())
+    _console.print(
+        f"[bold green]Done![/bold green] {len(updated)} panel(s) updated in {elapsed:.1f}s"
+    )
+    return updated

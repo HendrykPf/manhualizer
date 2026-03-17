@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from rich.console import Console
-from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeElapsedColumn
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 
 from .config import OutputConfig, RendererConfig
 from .models import Panel, RenderResult
@@ -108,8 +108,8 @@ MODELS: dict[str, ModelSpec] = {
         display_name="ComfyUI (local)",
         renderer_class="manhualizer.renderers.comfyui.ComfyUIRenderer",
         capabilities=ModelCapabilities(
-            reference_images=True,
-            multi_image_input=True,
+            reference_images=False,
+            multi_image_input=False,
             lora=True,
             negative_prompt=True,
         ),
@@ -168,13 +168,15 @@ class BaseRenderer(ABC):
     ) -> list[RenderResult]:
         """Render all panels concurrently up to `concurrency` at a time.
 
-        Shows a live progress bar: panel N / total with elapsed time.
+        Shows a live progress bar with per-panel timing and a rolling ETA.
         If `resume` is True, panels whose output file already exists are
         skipped and a RenderResult pointing to the existing file is returned.
 
         Warn (don't fail) when LoRA config is set but the model doesn't
         support it.
         """
+        import time as _time
+
         if self.config.loras and not self.model_spec.capabilities.lora:
             _console.print(
                 f"[yellow]render: LoRA config ignored — "
@@ -185,14 +187,18 @@ class BaseRenderer(ABC):
         output_dir.mkdir(parents=True, exist_ok=True)
 
         sem = asyncio.Semaphore(concurrency)
+        completed_times: list[float] = []  # seconds per rendered panel (skipped excluded)
 
         with Progress(
+            SpinnerColumn(),
             TextColumn("[bold cyan]render[/bold cyan]"),
             BarColumn(),
-            TaskProgressColumn(),
-            TextColumn("panels"),
+            MofNCompleteColumn(),
             TimeElapsedColumn(),
+            TextColumn("·"),
+            TimeRemainingColumn(),
             console=_console,
+            transient=False,
         ) as progress:
             task = progress.add_task("", total=len(panels))
 
@@ -207,7 +213,25 @@ class BaseRenderer(ABC):
                         prompt_used=panel.visual_prompt,
                     )
                 async with sem:
+                    t0 = _time.monotonic()
                     result = await self.render_async(panel, output_dir, output_cfg, reference_images)
+                    elapsed = _time.monotonic() - t0
+                    completed_times.append(elapsed)
+
+                    avg = sum(completed_times) / len(completed_times)
+                    done = progress.tasks[task].completed + 1
+                    remaining = len(panels) - done
+                    eta_s = avg * remaining
+                    eta_str = (
+                        f"{int(eta_s // 60)}m {int(eta_s % 60)}s" if eta_s >= 60
+                        else f"{eta_s:.0f}s"
+                    )
+                    progress.console.print(
+                        f"  [dim]panel {panel.panel_number:04d}[/dim]  "
+                        f"[green]{elapsed:.1f}s[/green]  "
+                        f"avg [cyan]{avg:.1f}s[/cyan]/panel  "
+                        f"ETA [yellow]{eta_str}[/yellow]"
+                    )
                     progress.advance(task)
                     return result
 

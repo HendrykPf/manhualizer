@@ -22,7 +22,7 @@ app = typer.Typer(
 _console = Console()
 
 # %% auto #0
-__all__ = ['app', 'convert', 'analyze_only', 'storyboard_only', 'render_only', 'list_models_cmd', 'main']
+__all__ = ['app', 'convert', 'analyze_only', 'storyboard_only', 'render_only', 'speech_bubbles_cmd', 'list_models_cmd', 'main']
 
 # %% ../nbs/11_cli.ipynb #cell-4
 def _load(config_path, model, template, output_dir, fmt, width, height, aspect_ratio,
@@ -129,6 +129,21 @@ def render_only(
     from manhualizer.pipeline import run_render_only
     result = run_render_only(story, cfg)
     _console.print(f"[green]Render complete:[/green] {len(result.rendered_panels)} panel(s) → {result.output_dir}")
+
+
+@app.command(name="speech-bubbles")
+def speech_bubbles_cmd(
+    story:     Annotated[Path,           typer.Argument(help="Path to the story text file.")],
+    config:    Annotated[Optional[Path], typer.Option("--config", "-c", help="Path to manhualizer.yml.")] = None,
+    no_resume: Annotated[bool,           typer.Option("--no-resume", help="Reprocess all panels.")] = False,
+):
+    """Apply speech bubbles to rendered panels via ComfyUI (run after render step)."""
+    from dotenv import load_dotenv; load_dotenv()
+    from manhualizer.config import load_config
+    from manhualizer.pipeline import run_speech_bubbles
+    cfg = load_config(config, resume=not no_resume)
+    updated = run_speech_bubbles(story, cfg)
+    _console.print(f"[green]Speech bubbles applied:[/green] {len(updated)} panel(s) updated")
 
 
 @app.command(name="models")

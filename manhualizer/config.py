@@ -94,7 +94,9 @@ class ComfyUIConfig(BaseModel):
     """Config for a local ComfyUI server."""
     base_url: str = "http://127.0.0.1:8188"
     workflow_template_path: str = ""
-    """Path to a ComfyUI workflow JSON exported in API format."""
+    """Path to a ComfyUI workflow JSON (API format) for image generation (Step 1)."""
+    speech_bubble_workflow_path: str = ""
+    """Path to a ComfyUI workflow JSON for adding speech bubbles (Step 2). Optional."""
     poll_interval: float = 2.0
     timeout: float = 120.0
 

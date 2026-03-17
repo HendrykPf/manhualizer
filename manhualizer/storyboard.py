@@ -41,69 +41,6 @@ def _location_lookup(analysis: StoryAnalysis) -> dict[str, str]:
     }
 
 
-def _dialogue_instructions(panel_data: dict) -> str:
-    """Build fallback image prompt instructions for dialogue bubbles.
-
-    Used only when the LLM did not produce a full visual_prompt (build-from-parts
-    path). The storyboard LLM is instructed to embed bubble descriptions inside
-    visual_prompt itself, so this function is a safety net only.
-
-    Manhwa bubble visual guide:
-    - speech  → oval bubble, white fill, black border, pointed tail toward speaker
-    - shout   → jagged spiky starburst bubble, thick border, bold text, tail toward speaker
-    - whisper → small oval bubble with dashed border, italic text, delicate tail
-    - thought → cloud of linked oval puffs, dotted ellipsis trail toward thinker
-    - caption → rectangular box, solid black border, at top or bottom panel edge
-    - sfx     → oversized bold stylised lettering, no bubble, integrated into action
-    """
-    dialogue = panel_data.get("dialogue", [])
-    if not dialogue:
-        return ""
-
-    parts = []
-    for d in dialogue:
-        bubble = d.get("bubble_type", "speech")
-        speaker = d.get("speaker", "")
-        text = d.get("text", "")
-        if not text:
-            continue
-
-        if bubble == "caption" or speaker == "narration":
-            parts.append(
-                f'rectangular caption box with solid black border and white fill'
-                f', spanning the panel width at the top or bottom edge, text: "{text}"'
-            )
-        elif bubble == "shout":
-            parts.append(
-                f'jagged spiky starburst shout bubble with thick black border and oversized bold text'
-                f', aggressive pointed tail toward {speaker}, placed prominently near the character, text: "{text}"'
-            )
-        elif bubble == "whisper":
-            parts.append(
-                f'small oval bubble with dashed border and small italic lettering'
-                f', delicate tail pointing toward {speaker}, placed close to the speaker, text: "{text}"'
-            )
-        elif bubble == "thought":
-            parts.append(
-                f'cloud of linked oval puffs with dotted ellipsis trail toward {speaker}'
-                f', floating above or beside the character, text: "{text}"'
-            )
-        elif bubble == "sfx":
-            parts.append(
-                f'oversized bold stylised "{text}" lettering integrated into the action area'
-                f', dynamic angle, no bubble or border'
-            )
-        else:
-            parts.append(
-                f'oval speech bubble with white fill and black border'
-                f', short pointed tail aimed at {speaker}\'s mouth, placed near the character\'s head, text: "{text}"'
-            )
-
-    if not parts:
-        return ""
-    return "; ".join(parts) + "."
-
-
 def _assemble_visual_prompt(
     panel_data: dict,
     templates: TemplateSet,
@@ -112,17 +49,12 @@ def _assemble_visual_prompt(
 ) -> str:
     """Assemble the final image-gen prompt for a panel.
 
-    If the LLM already produced a complete visual_prompt, use it directly —
-    the storyboard prompt instructs the LLM to embed bubble and SFX descriptions
-    at their natural compositional position, so no appending is needed.
-
-    When building from parts (no LLM prompt), bubble descriptions are woven in
-    after the action section and before mood/camera, not appended at the end.
+    Speech bubbles are added as a separate post-processing step via ComfyUI,
+    so they are intentionally excluded from the visual prompt here.
     """
     # Use LLM-provided prompt if present and substantial
     llm_prompt = panel_data.get("visual_prompt", "").strip()
     if llm_prompt and len(llm_prompt) > 20:
-        # Ensure style prefix is prepended if missing
         style = templates.style_prefix
         if style and not llm_prompt.lower().startswith(style[:15].lower()):
             return f"{style}, {llm_prompt}"
@@ -140,14 +72,9 @@ def _assemble_visual_prompt(
     mood = panel_data.get("mood", "")
     camera = panel_data.get("camera_angle", "")
 
-    dialogue_part = _dialogue_instructions(panel_data)
-
     style_prefix = templates.style_prefix
-    # Weave bubbles in after action, before mood/camera
     core_parts = [p for p in [style_prefix, location_prompt, character_prompts, action] if p]
     base = ", ".join(core_parts)
-    if dialogue_part:
-        base = f"{base}. {dialogue_part}"
     tail = ", ".join(p for p in [mood, camera] if p)
     return f"{base} {tail}".strip() if tail else base
 

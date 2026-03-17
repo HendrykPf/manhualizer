@@ -1,0 +1,287 @@
+{
+  "127": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "128:105",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "128:104": {
+    "inputs": {
+      "noise": [
+        "128:106",
+        0
+      ],
+      "guider": [
+        "128:103",
+        0
+      ],
+      "sampler": [
+        "128:101",
+        0
+      ],
+      "sigmas": [
+        "128:102",
+        0
+      ],
+      "latent_image": [
+        "128:112",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "128:105": {
+    "inputs": {
+      "samples": [
+        "128:104",
+        0
+      ],
+      "vae": [
+        "128:111",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "128:106": {
+    "inputs": {
+      "noise_seed": 841799659607974
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "128:108": {
+    "inputs": {
+      "clip_name": "qwen_3_8b_fp8mixed.safetensors",
+      "type": "flux2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "128:109": {
+    "inputs": {
+      "text": "Add a scream bubble with the text \"Hi, I'm Superman. I am starring in my own super-movie. Come and watch it! ROOAARRR!\" originating from superman.",
+      "clip": [
+        "128:108",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "bubble_text"
+    }
+  },
+  "128:110": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "128:108",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "128:111": {
+    "inputs": {
+      "vae_name": "flux2-vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "128:112": {
+    "inputs": {
+      "width": [
+        "128:114",
+        0
+      ],
+      "height": [
+        "128:114",
+        1
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyFlux2LatentImage",
+    "_meta": {
+      "title": "Empty Flux 2 Latent"
+    }
+  },
+  "128:116": {
+    "inputs": {
+      "image": "ComfyUI_00001_.png",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "bubble_input_image"
+    }
+  },
+  "128:80": {
+    "inputs": {
+      "image": [
+        "128:116",
+        0
+      ],
+      "upscale_method": "nearest-exact",
+      "megapixels": 1,
+      "resolution_steps": 1
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "ImageScaleToTotalPixels"
+    }
+  },
+  "128:113:115": {
+    "inputs": {
+      "conditioning": [
+        "128:110",
+        0
+      ],
+      "latent": [
+        "128:113:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "128:113:78": {
+    "inputs": {
+      "pixels": [
+        "128:80",
+        0
+      ],
+      "vae": [
+        "128:111",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "128:113:77": {
+    "inputs": {
+      "conditioning": [
+        "128:109",
+        0
+      ],
+      "latent": [
+        "128:113:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "128:114": {
+    "inputs": {
+      "image": [
+        "128:80",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "128:107": {
+    "inputs": {
+      "unet_name": "flux-2-klein-base-9b-fp8.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "128:101": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "128:102": {
+    "inputs": {
+      "steps": 10,
+      "width": [
+        "128:114",
+        0
+      ],
+      "height": [
+        "128:114",
+        1
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "128:125": {
+    "inputs": {
+      "lora_name": "flux-2-klein-9b_extracted_lora_rank_256-bf16.safetensors",
+      "strength_model": 0.45,
+      "model": [
+        "128:107",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "distill LoRA"
+    }
+  },
+  "128:103": {
+    "inputs": {
+      "cfg": 4,
+      "model": [
+        "128:125",
+        0
+      ],
+      "positive": [
+        "128:113:77",
+        0
+      ],
+      "negative": [
+        "128:113:115",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFGGuider"
+    }
+  }
+}
