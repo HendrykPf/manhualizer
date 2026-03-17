@@ -24,16 +24,38 @@ from .validate import validate_storyboard
 
 _console = Console()
 
-
 # %% auto #0
 __all__ = ['run', 'run_analyze_only', 'run_storyboard_only', 'run_render_only', 'run_speech_bubbles']
 
 # %% ../nbs/10_pipeline.ipynb #cell-4
+_ANALYSIS_FILE = "analysis.json"
+_STORYBOARD_FILE = "storyboard.json"
+
+
 def _output_dir(config: PipelineConfig, story_path: Path) -> Path:
     """Resolve the output directory, defaulting to <story_stem>_comic/ next to the story."""
     if config.output.dir != "output":
         return Path(config.output.dir)
     return story_path.parent / f"{story_path.stem}_comic"
+
+
+def _delete_panel_files(panels_dir: Path, panels: list, force_set: set) -> None:
+    """Delete existing image files for panels whose number is in force_set."""
+    for panel in panels:
+        if panel.panel_number not in force_set:
+            continue
+        for ext in ("png", "jpg", "webp"):
+            p = panels_dir / f"panel_{panel.panel_number:04d}.{ext}"
+            if p.exists():
+                p.unlink()
+                # Also remove the pre-bubble backup so a fresh one is created
+                # after the next render.
+                raw = p.parent / (p.stem + ".raw" + p.suffix)
+                if raw.exists():
+                    raw.unlink()
+                break
+
+
 
 # %% ../nbs/10_pipeline.ipynb #cell-5
 def run(
@@ -99,14 +121,14 @@ def run(
     # ── Step 1: Analyze ──────────────────────────────────────────────────────
     t0 = _step("Analyzing story…")
     analysis = analyze_story(
-        story_text, llm, config, output_dir / "analysis.json"
+        story_text, llm, config, output_dir / _ANALYSIS_FILE
     )
     _done(t0, f"{len(analysis.characters)} character(s), {len(analysis.locations)} location(s)")
 
     # ── Step 2: Storyboard ───────────────────────────────────────────────────
     t0 = _step("Building storyboard…")
     storyboard = build_storyboard(
-        story_text, analysis, llm, templates, config, output_dir / "storyboard.json"
+        story_text, analysis, llm, templates, config, output_dir / _STORYBOARD_FILE
     )
     panel_count = len(storyboard.all_panels)
     _done(t0, f"{len(storyboard.scenes)} scene(s), {panel_count} panel(s)")
@@ -142,14 +164,15 @@ def run(
             config.output,
             reference_images=character_sheets or None,
             resume=config.resume,
+            verbose=config.verbose,
         )
     )
     _done(t0)
 
     result = ComicOutput(
         output_dir=output_dir,
-        analysis_path=output_dir / "analysis.json",
-        storyboard_path=output_dir / "storyboard.json",
+        analysis_path=output_dir / _ANALYSIS_FILE,
+        storyboard_path=output_dir / _STORYBOARD_FILE,
         validation_path=validation_path,
         rendered_panels=render_results,
     )
@@ -177,7 +200,7 @@ def run_analyze_only(
     templates = load_templates(config.template, config.custom_templates_dir)
     llm = LLMClient(config.llm, templates)
     return analyze_story(
-        story_path.read_text(encoding="utf-8"), llm, config, output_dir / "analysis.json"
+        story_path.read_text(encoding="utf-8"), llm, config, output_dir / _ANALYSIS_FILE
     )
 
 
@@ -195,23 +218,32 @@ def run_storyboard_only(
     templates = load_templates(config.template, config.custom_templates_dir)
     llm = LLMClient(config.llm, templates)
     story_text = story_path.read_text(encoding="utf-8")
-    analysis = analyze_story(story_text, llm, config, output_dir / "analysis.json")
-    return build_storyboard(story_text, analysis, llm, templates, config, output_dir / "storyboard.json")
+    analysis = analyze_story(story_text, llm, config, output_dir / _ANALYSIS_FILE)
+    return build_storyboard(story_text, analysis, llm, templates, config, output_dir / _STORYBOARD_FILE)
 
 
 def run_render_only(
     story_path: str | Path,
     config: PipelineConfig | None = None,
+    rerender_panels: list[int] | None = None,
 ) -> ComicOutput:
-    """Run render step only. Requires analysis.json and storyboard.json to exist."""
+    """Run render step only. Requires analysis.json and storyboard.json to exist.
+
+    Args:
+        story_path: Path to the story text file.
+        config: PipelineConfig.
+        rerender_panels: Optional list of panel numbers to force re-render.
+                         Those specific panels are re-rendered even if their
+                         image file already exists.
+    """
     story_path = Path(story_path)
     if config is None:
         from manhualizer.config import load_config
         config = load_config()
     output_dir = _output_dir(config, story_path)
 
-    analysis_path = output_dir / "analysis.json"
-    storyboard_path = output_dir / "storyboard.json"
+    analysis_path = output_dir / _ANALYSIS_FILE
+    storyboard_path = output_dir / _STORYBOARD_FILE
     for p in (analysis_path, storyboard_path):
         if not p.exists():
             raise FileNotFoundError(
@@ -231,11 +263,19 @@ def run_render_only(
             )
         )
 
+    panels_dir = output_dir / "panels"
+
+    if rerender_panels:
+        force_set = set(rerender_panels)
+        _console.print(f"  re-rendering panel(s): [cyan]{sorted(force_set)}[/cyan]")
+        _delete_panel_files(panels_dir, storyboard.all_panels, force_set)
+
     render_results = asyncio.run(
         renderer.render_batch_async(
-            storyboard.all_panels, output_dir / "panels",
+            storyboard.all_panels, panels_dir,
             config.output, reference_images=character_sheets or None,
             resume=config.resume,
+            verbose=config.verbose,
         )
     )
     return ComicOutput(
@@ -249,6 +289,7 @@ def run_render_only(
 def run_speech_bubbles(
     story_path: str | Path,
     config: PipelineConfig | None = None,
+    rerender_panels: list[int] | None = None,
 ) -> list:
     """Apply speech bubbles to already-rendered panels via ComfyUI.
 
@@ -257,17 +298,17 @@ def run_speech_bubbles(
     that has dialogue, and overwrites the panel images in-place.
 
     Args:
-        story_path: Path to the original story text file (used to locate the
-                    output directory).
+        story_path: Path to the original story text file.
         config: PipelineConfig. Must have
                 ``renderer.comfyui.speech_bubble_workflow_path`` set.
+        rerender_panels: Optional list of panel numbers to force re-process,
+                         ignoring existing ``.bubbles_done`` markers.
 
     Returns:
         List of Path objects for every panel image that was updated.
 
     Raises:
-        FileNotFoundError: If storyboard.json or the speech bubble workflow is
-                           missing.
+        FileNotFoundError: If storyboard.json or the speech bubble workflow is missing.
     """
     story_path = Path(story_path)
     if config is None:
@@ -275,7 +316,7 @@ def run_speech_bubbles(
         config = load_config()
 
     output_dir = _output_dir(config, story_path)
-    storyboard_path = output_dir / "storyboard.json"
+    storyboard_path = output_dir / _STORYBOARD_FILE
     if not storyboard_path.exists():
         raise FileNotFoundError(
             f"{storyboard_path} not found. Run `manhualizer render-only` first."
@@ -284,9 +325,25 @@ def run_speech_bubbles(
     storyboard = Storyboard.model_validate_json(storyboard_path.read_text())
     panels_dir = output_dir / "panels"
 
-    from manhualizer.renderers.comfyui import ComfyUIRenderer
-    from manhualizer.render import MODELS
+    templates = load_templates(config.template, config.custom_templates_dir)
+    try:
+        bubble_types: dict = templates._load("bubble_types.yml")
+    except FileNotFoundError:
+        bubble_types = {}
+
+    from .renderers.comfyui import ComfyUIRenderer
+    from .render import MODELS
     renderer = ComfyUIRenderer(MODELS["comfyui"], config.renderer)
+
+    # When specific panels are requested, pass only those — keeps the progress total accurate.
+    if rerender_panels:
+        force_set = set(rerender_panels)
+        _console.print(f"  re-processing bubble(s) for panel(s): [cyan]{sorted(force_set)}[/cyan]")
+        panels_to_process = [p for p in storyboard.all_panels if p.panel_number in force_set]
+        resume_flag = False
+    else:
+        panels_to_process = storyboard.all_panels
+        resume_flag = config.resume
 
     _console.print(Rule("[bold]manhualizer[/bold] — add speech bubbles"))
     _console.print(f"  workflow: [cyan]{config.renderer.comfyui.speech_bubble_workflow_path}[/cyan]")
@@ -295,9 +352,11 @@ def run_speech_bubbles(
     t0 = time.monotonic()
     updated = asyncio.run(
         renderer.add_speech_bubbles_batch_async(
-            storyboard.all_panels,
+            panels_to_process,
             panels_dir,
-            resume=config.resume,
+            resume=resume_flag,
+            bubble_types=bubble_types,
+            verbose=config.verbose,
         )
     )
     elapsed = time.monotonic() - t0

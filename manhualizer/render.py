@@ -165,6 +165,7 @@ class BaseRenderer(ABC):
         reference_images: dict[str, Path] | None = None,
         resume: bool = True,
         concurrency: int = 4,
+        verbose: bool = True,
     ) -> list[RenderResult]:
         """Render all panels concurrently up to `concurrency` at a time.
 
@@ -187,7 +188,10 @@ class BaseRenderer(ABC):
         output_dir.mkdir(parents=True, exist_ok=True)
 
         sem = asyncio.Semaphore(concurrency)
-        completed_times: list[float] = []  # seconds per rendered panel (skipped excluded)
+        last_finish: list[float] = [_time.monotonic()]
+        finish_lock = asyncio.Lock()
+        completed_times: list[float] = []  # delta between consecutive completions
+        eta_deadline: list[float] = [0.0]
 
         with Progress(
             SpinnerColumn(),
@@ -196,11 +200,11 @@ class BaseRenderer(ABC):
             MofNCompleteColumn(),
             TimeElapsedColumn(),
             TextColumn("·"),
-            TimeRemainingColumn(),
+            TextColumn("[yellow]{task.fields[eta]}[/yellow]"),
             console=_console,
             transient=False,
         ) as progress:
-            task = progress.add_task("", total=len(panels))
+            task = progress.add_task("", total=len(panels), eta="--:--")
 
             async def _render_one(panel: Panel) -> RenderResult:
                 expected = output_dir / f"panel_{panel.panel_number:04d}.{output_cfg.format}"
@@ -213,30 +217,29 @@ class BaseRenderer(ABC):
                         prompt_used=panel.visual_prompt,
                     )
                 async with sem:
-                    t0 = _time.monotonic()
                     result = await self.render_async(panel, output_dir, output_cfg, reference_images)
-                    elapsed = _time.monotonic() - t0
+
+                async with finish_lock:
+                    now = _time.monotonic()
+                    elapsed = now - last_finish[0]
+                    last_finish[0] = now
                     completed_times.append(elapsed)
-
-                    avg = sum(completed_times) / len(completed_times)
-                    done = progress.tasks[task].completed + 1
-                    remaining = len(panels) - done
-                    eta_s = avg * remaining
-                    eta_str = (
-                        f"{int(eta_s // 60)}m {int(eta_s % 60)}s" if eta_s >= 60
-                        else f"{eta_s:.0f}s"
-                    )
-                    progress.console.print(
-                        f"  [dim]panel {panel.panel_number:04d}[/dim]  "
-                        f"[green]{elapsed:.1f}s[/green]  "
-                        f"avg [cyan]{avg:.1f}s[/cyan]/panel  "
-                        f"ETA [yellow]{eta_str}[/yellow]"
-                    )
+                    avg = sum(completed_times[1:]) / len(completed_times[1:]) if len(completed_times) > 1 else completed_times[0]
+                    remaining = len(panels) - (progress.tasks[task].completed + 1)
+                    eta_deadline[0] = _time.monotonic() + avg * remaining
+                    if verbose:
+                        from .renderers.comfyui import _print_panel_timing
+                        _print_panel_timing(progress, panel.panel_number, elapsed, avg, avg * remaining)
                     progress.advance(task)
-                    return result
+                return result
 
-            tasks = [_render_one(p) for p in panels]
-            results = await asyncio.gather(*tasks, return_exceptions=False)
+            from .renderers.comfyui import _eta_tick
+            tick_task = asyncio.create_task(_eta_tick(progress, task, eta_deadline))
+            try:
+                results = await asyncio.gather(*[_render_one(p) for p in panels])
+            finally:
+                tick_task.cancel()
+                await asyncio.gather(tick_task, return_exceptions=True)
 
         return list(results)
 

@@ -103,7 +103,7 @@ class ComfyUIConfig(BaseModel):
 # %% ../nbs/01_config.ipynb #8656d202
 class RendererConfig(BaseModel):
     """Image generation settings: which model to use and its parameters."""
-    model: str = "flux-klein"
+    model: str = "comfyui"
     """Key into the model registry. One of: nanobanana, chatgpt-image, seedream, seedream-4.5, flux-klein, comfyui."""
     loras: list[LoRAConfig] = Field(default_factory=list)
     """LoRA weights to apply. Silently ignored for models that don't support LoRA."""
@@ -136,6 +136,8 @@ class PipelineConfig(BaseModel):
     """Run the optional LLM validation step (adds latency and cost)."""
     resume: bool = True
     """Skip steps whose output files already exist."""
+    verbose: bool = True
+    """Print per-panel timing lines during render and speech bubble steps."""
 
 
 # %% ../nbs/01_config.ipynb #56d37f4a
@@ -179,6 +181,7 @@ def _apply_overrides(data: dict, overrides: dict) -> None:
         "template":        ("template",),
         "resume":          ("resume",),
         "run_validation":  ("run_validation",),
+        "verbose":         ("verbose",),
         "style_prefix":    None,  # handled via template system, not config
     }
     for key, value in overrides.items():

@@ -32,13 +32,15 @@ storyboard_prompt: |
   - "shout":   yelling, screaming, angry outburst, strong emphasis
   - "whisper": quiet, secret, or hesitant speech
   - "thought": internal monologue, unspoken feelings
-  - "caption": narrator voice, scene-setting text, time passing, ANY text NOT spoken by a character
+  - "caption": narrator voice only — spoken narration that adds meaning a reader cannot see. Do NOT use for time jumps ("3 days later"), location names, or scene descriptions — those belong in visual_prompt only, NOT in dialogue
   - "sfx":     sound effects (BANG, CRASH, WHOOSH, etc.)
 
   CRITICAL dialogue rules:
   - Each dialogue entry must have EXACTLY ONE character name as speaker — never two names, never "Character A and Character B"
   - If multiple characters say the same thing at the same time, create one entry PER character with the same text
   - Use "caption" (not "speech") for any narration or storytelling text
+  - NEVER add a caption for time transitions ("3 days later", "meanwhile", "the next morning") — show the passage of time through the image only
+  - A panel should have AT MOST ONE caption entry — merge multiple narration lines into a single caption if needed
 
   Return a JSON object:
   {

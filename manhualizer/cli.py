@@ -26,7 +26,7 @@ __all__ = ['app', 'convert', 'analyze_only', 'storyboard_only', 'render_only', '
 
 # %% ../nbs/11_cli.ipynb #cell-4
 def _load(config_path, model, template, output_dir, fmt, width, height, aspect_ratio,
-          validate, no_resume, lora):
+          validate, no_resume, lora, quiet=False):
     """Build a PipelineConfig from CLI args, loading .env and config file first."""
     from dotenv import load_dotenv
     load_dotenv()
@@ -42,6 +42,7 @@ def _load(config_path, model, template, output_dir, fmt, width, height, aspect_r
         "aspect_ratio": aspect_ratio,
         "run_validation": True if validate else None,
         "resume": False if no_resume else None,
+        "verbose": False if quiet else None,
     }
     cfg = load_config(config_path, **{k: v for k, v in overrides.items() if v is not None})
 
@@ -71,11 +72,12 @@ def convert(
     aspect_ratio: Annotated[Optional[str],  typer.Option("--aspect-ratio", "-r", help="Aspect ratio e.g. '9:16'.")] = None,
     validate:     Annotated[bool,           typer.Option("--validate", help="Run LLM validation step.")] = False,
     no_resume:    Annotated[bool,           typer.Option("--no-resume", help="Rerun all steps.")] = False,
+    quiet:        Annotated[bool,           typer.Option("--quiet", "-q", help="Suppress per-panel timing lines.")] = False,
     lora:         Annotated[Optional[list[Path]], typer.Option("--lora", "-l", help="LoRA path/URL (repeatable).")] = None,
 ):
     """Convert a story file into a manhua comic (full pipeline)."""
     cfg = _load(config, model, template, output, fmt, width, height,
-                aspect_ratio, validate, no_resume, lora)
+                aspect_ratio, validate, no_resume, lora, quiet=quiet)
     from manhualizer.pipeline import run
     run(story, cfg)
 
@@ -122,12 +124,14 @@ def render_only(
     height:       Annotated[Optional[int],  typer.Option("--height", "-H", help="Output height in pixels.")] = None,
     aspect_ratio: Annotated[Optional[str],  typer.Option("--aspect-ratio", "-r", help="Aspect ratio e.g. '9:16'.")] = None,
     no_resume:    Annotated[bool,           typer.Option("--no-resume", help="Rerun all steps.")] = False,
+    quiet:        Annotated[bool,           typer.Option("--quiet", "-q", help="Suppress per-panel timing lines.")] = False,
     lora:         Annotated[Optional[list[Path]], typer.Option("--lora", "-l", help="LoRA path/URL (repeatable).")] = None,
+    panel:        Annotated[Optional[list[int]], typer.Option("--panel", "-p", help="Re-render specific panel number(s) (repeatable).")] = None,
 ):
     """Run only the render step (requires analysis.json + storyboard.json to exist)."""
-    cfg = _load(config, model, None, None, fmt, width, height, aspect_ratio, False, no_resume, lora)
+    cfg = _load(config, model, None, None, fmt, width, height, aspect_ratio, False, no_resume, lora, quiet=quiet)
     from manhualizer.pipeline import run_render_only
-    result = run_render_only(story, cfg)
+    result = run_render_only(story, cfg, rerender_panels=panel or None)
     _console.print(f"[green]Render complete:[/green] {len(result.rendered_panels)} panel(s) → {result.output_dir}")
 
 
@@ -136,14 +140,50 @@ def speech_bubbles_cmd(
     story:     Annotated[Path,           typer.Argument(help="Path to the story text file.")],
     config:    Annotated[Optional[Path], typer.Option("--config", "-c", help="Path to manhualizer.yml.")] = None,
     no_resume: Annotated[bool,           typer.Option("--no-resume", help="Reprocess all panels.")] = False,
+    quiet:     Annotated[bool,           typer.Option("--quiet", "-q", help="Suppress per-panel timing lines.")] = False,
+    panel:     Annotated[Optional[list[int]], typer.Option("--panel", "-p", help="Re-apply bubbles to specific panel number(s) (repeatable).")] = None,
 ):
     """Apply speech bubbles to rendered panels via ComfyUI (run after render step)."""
     from dotenv import load_dotenv; load_dotenv()
     from manhualizer.config import load_config
     from manhualizer.pipeline import run_speech_bubbles
-    cfg = load_config(config, resume=not no_resume)
-    updated = run_speech_bubbles(story, cfg)
+    cfg = load_config(config, resume=not no_resume, verbose=not quiet)
+    updated = run_speech_bubbles(story, cfg, rerender_panels=panel or None)
     _console.print(f"[green]Speech bubbles applied:[/green] {len(updated)} panel(s) updated")
+
+
+@app.command(name="generate-html")
+def generate_html_cmd(
+    story:  Annotated[Path,           typer.Argument(help="Path to the story text file.")],
+    config: Annotated[Optional[Path], typer.Option("--config", "-c", help="Path to manhualizer.yml.")] = None,
+):
+    """Regenerate index.html for an existing comic (no re-rendering needed)."""
+    from dotenv import load_dotenv; load_dotenv()
+    from manhualizer.config import load_config
+    from manhualizer.models import ComicOutput, StoryAnalysis, Storyboard
+    from manhualizer.html import generate_html_viewer
+    from manhualizer.pipeline import _output_dir, _ANALYSIS_FILE, _STORYBOARD_FILE
+
+    cfg = load_config(config)
+    output_dir = _output_dir(cfg, Path(story))
+
+    analysis_path = output_dir / _ANALYSIS_FILE
+    storyboard_path = output_dir / _STORYBOARD_FILE
+    for p in (analysis_path, storyboard_path):
+        if not p.exists():
+            _console.print(f"[red]Not found:[/red] {p}")
+            raise typer.Exit(1)
+
+    analysis = StoryAnalysis.model_validate_json(analysis_path.read_text())
+    storyboard = Storyboard.model_validate_json(storyboard_path.read_text())
+    result = ComicOutput(
+        output_dir=output_dir,
+        analysis_path=analysis_path,
+        storyboard_path=storyboard_path,
+        rendered_panels=[],
+    )
+    html_path = generate_html_viewer(result, storyboard, title=analysis.title)
+    _console.print(f"[green]HTML viewer:[/green] {html_path}")
 
 
 @app.command(name="models")

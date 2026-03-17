@@ -42,6 +42,29 @@ def _find_panel_image(panels_dir: Path, panel_number: int) -> Path | None:
             return p
     return None
 
+
+def _print_panel_timing(progress, panel_num: int, elapsed: float, avg: float, eta_s: float) -> None:
+    """Print the per-panel timing line to the progress console."""
+    eta_str = f"{int(eta_s // 60)}m {int(eta_s % 60)}s" if eta_s >= 60 else f"{eta_s:.0f}s"
+    progress.console.print(
+        f"  [dim]panel {panel_num:04d}[/dim]  "
+        f"[green]{elapsed:.1f}s[/green]  "
+        f"avg [cyan]{avg:.1f}s[/cyan]/panel  "
+        f"ETA [yellow]{eta_str}[/yellow]"
+    )
+
+
+async def _eta_tick(progress, task_id: int, eta_deadline: list) -> None:
+    """Count down the ETA progress bar field every second from eta_deadline."""
+    import asyncio as _asyncio
+    import time as _t
+    while True:
+        await _asyncio.sleep(1)
+        if eta_deadline[0] > 0:
+            remaining_s = max(0.0, eta_deadline[0] - _t.monotonic())
+            mins, secs = divmod(int(remaining_s), 60)
+            progress.update(task_id, eta=f"{mins}m {secs}s" if mins else f"{secs}s")
+
 # %% ../../nbs/08_renderers/comfyui.ipynb #cell-5
 class ComfyUIRenderer(BaseRenderer):
     """Image generation via a local ComfyUI server.
@@ -200,7 +223,21 @@ class ComfyUIRenderer(BaseRenderer):
 
     # ── Speech bubble step ───────────────────────────────────────────────────
 
-    def _apply_speech_bubbles(self, panel: Panel, image_path: Path) -> bytes | None:
+    @staticmethod
+    def _bubble_prompt(speaker: str, text: str, bubble_type: str, bubble_types: dict) -> str:
+        """Return a visual description for one dialogue bubble using the template dict."""
+        t = bubble_type.lower()
+        if speaker.lower() == "narration":
+            t = "caption"
+        template = bubble_types.get(t) or bubble_types.get("speech") or ""
+        return template.format(speaker=speaker, text=text)
+
+    def _apply_speech_bubbles(
+        self,
+        panel: Panel,
+        image_path: Path,
+        bubble_types: dict,
+    ) -> bytes | None:
         """Run the speech bubble workflow on the given panel image.
 
         Returns the new image bytes, or None if no workflow is configured.
@@ -211,7 +248,7 @@ class ComfyUIRenderer(BaseRenderer):
 
         image_filename = self._upload_image(image_path)
         dialogue_text = "\n".join(
-            f"[{b.speaker}] ({b.bubble_type}): {b.text}"
+            self._bubble_prompt(b.speaker, b.text, b.bubble_type, bubble_types)
             for b in panel.dialogue
         ) if panel.dialogue else ""
 
@@ -225,6 +262,8 @@ class ComfyUIRenderer(BaseRenderer):
         panels: list,
         panels_dir: Path,
         resume: bool = True,
+        bubble_types: dict | None = None,
+        verbose: bool = True,
     ) -> list[Path]:
         """Apply speech bubbles to a batch of already-rendered panel images.
 
@@ -264,6 +303,7 @@ class ComfyUIRenderer(BaseRenderer):
         last_finish: list[float] = [_time.monotonic()]
         finish_lock = asyncio.Lock()
         completed_times: list[float] = []
+        eta_deadline: list[float] = [0.0]  # monotonic timestamp when ETA hits zero
 
         with Progress(
             SpinnerColumn(),
@@ -278,24 +318,7 @@ class ComfyUIRenderer(BaseRenderer):
         ) as progress:
             task = progress.add_task("", total=total, eta="--:--")
 
-            async def _record_finish(panel_num: int) -> None:
-                async with finish_lock:
-                    now = _time.monotonic()
-                    elapsed = now - last_finish[0]
-                    last_finish[0] = now
-                    completed_times.append(elapsed)
-                    avg = sum(completed_times[1:]) / len(completed_times[1:]) if len(completed_times) > 1 else completed_times[0]
-                    remaining = total - (progress.tasks[task].completed + 1)
-                    eta_s = avg * remaining
-                    eta_str = f"{int(eta_s // 60)}m {int(eta_s % 60)}s" if eta_s >= 60 else f"{eta_s:.0f}s"
-                    progress.console.print(
-                        f"  [dim]panel {panel_num:04d}[/dim]  "
-                        f"[green]{elapsed:.1f}s[/green]  "
-                        f"avg [cyan]{avg:.1f}s[/cyan]/panel  "
-                        f"ETA [yellow]{eta_str}[/yellow]"
-                    )
-                    progress.update(task, eta=eta_str)
-                    progress.advance(task)
+            _bt = bubble_types or {}
 
             async def _process(panel) -> Path | None:
                 img_path = _find_panel_image(panels_dir, panel.panel_number)
@@ -308,9 +331,18 @@ class ComfyUIRenderer(BaseRenderer):
                     progress.advance(task)
                     return img_path
 
+                # Keep a clean backup of the rendered image before any bubbles are
+                # applied. On re-runs we always use this backup as the source so
+                # bubbles are never stacked on top of each other.
+                raw_path = img_path.parent / (img_path.stem + ".raw" + img_path.suffix)
+                if not raw_path.exists():
+                    import shutil as _shutil
+                    _shutil.copy2(img_path, raw_path)
+                source_path = raw_path
+
                 async with sem:
                     bubble_bytes = await asyncio.get_event_loop().run_in_executor(
-                        None, self._apply_speech_bubbles, panel, img_path
+                        None, lambda: self._apply_speech_bubbles(panel, source_path, _bt)
                     )
                 if bubble_bytes is None:
                     progress.advance(task)
@@ -318,10 +350,29 @@ class ComfyUIRenderer(BaseRenderer):
 
                 img_path.write_bytes(bubble_bytes)
                 marker.touch()
-                await _record_finish(panel.panel_number)
+
+                async with finish_lock:
+                    now = _time.monotonic()
+                    elapsed = now - last_finish[0]
+                    last_finish[0] = now
+                    completed_times.append(elapsed)
+                    avg = sum(completed_times[1:]) / len(completed_times[1:]) if len(completed_times) > 1 else completed_times[0]
+                    remaining = total - (progress.tasks[task].completed + 1)
+                    eta_deadline[0] = _time.monotonic() + avg * remaining
+                    if verbose:
+                        _print_panel_timing(progress, panel.panel_number, elapsed, avg, avg * remaining)
+                    progress.advance(task)
                 return img_path
 
-            results = await asyncio.gather(*[_process(p) for p in dialogue_panels])
+            tick_task = asyncio.create_task(_eta_tick(progress, task, eta_deadline))
+            try:
+                results = await asyncio.gather(
+                    *[_process(p) for p in dialogue_panels],
+                    return_exceptions=True,
+                )
+            finally:
+                tick_task.cancel()
+                await asyncio.gather(tick_task, return_exceptions=True)
 
         return [r for r in results if r is not None]
 

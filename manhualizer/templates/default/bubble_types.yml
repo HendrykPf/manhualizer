@@ -1,0 +1,36 @@
+# Visual prompt templates for each speech bubble type.
+# These are sent to the ComfyUI speech bubble workflow.
+# Variables: {speaker} = character name, {text} = dialogue text
+#
+# Customise these for your story by creating a bubble_types.yml in your
+# custom_templates_dir and overriding only the types you want to change.
+
+speech: >-
+  exactly one oval speech bubble, white fill, black border, do not repeat the bubble,
+  placed in an empty corner or edge of the panel away from faces and key action,
+  short pointed tail toward {speaker}'s mouth, text: "{text}"
+
+shout: >-
+  exactly one jagged spiky starburst shout bubble, thick black border, oversized bold text,
+  do not repeat the bubble, placed at the panel edge away from the main subject,
+  aggressive pointed tail toward {speaker}, text: "{text}"
+
+whisper: >-
+  exactly one small oval bubble, dashed border, small italic lettering,
+  do not repeat the bubble, tucked into a quiet corner near {speaker},
+  delicate tail toward {speaker}'s mouth, text: "{text}"
+
+thought: >-
+  exactly one thought bubble made of linked oval puffs, dotted ellipsis trail toward {speaker},
+  do not repeat the bubble, floating in empty space above or beside {speaker},
+  away from other characters, text: "{text}"
+
+caption: >-
+  exactly one rectangular caption box, solid black border, white fill,
+  spanning the full panel width at the very top or very bottom edge of the panel,
+  never overlapping characters or action, text: "{text}"
+
+sfx: >-
+  exactly one instance of oversized bold stylised "{text}" sound-effect lettering,
+  integrated into the background of the action, dynamic angle, no bubble or border,
+  do not repeat the text

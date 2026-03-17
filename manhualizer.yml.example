@@ -15,7 +15,7 @@ llm:
   max_tokens: 8192
 
 renderer:
-  model: "flux-klein"   # one of: nanobanana, chatgpt-image, seadreem, flux-klein, comfyui
+  model: "comfyui"   # one of: nanobanana, chatgpt-image, seedream, seedream-4.5, flux-klein, comfyui
 
   # LoRA weights (only applied for models that support it: flux-klein, seadreem, comfyui)
   loras: []
