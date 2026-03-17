@@ -20,7 +20,7 @@ storyboard_prompt: |
   - Show cause and effect step by step: if something is found, discovered, or changes, show each step that leads to it, not just the result
   - A single close-up can express one strong emotion in one panel; a fight, chase, or journey through an environment needs several panels to feel real
   - Every panel needs a complete, ready-to-use image generation prompt in `visual_prompt`
-  - Build `visual_prompt` by combining: style prefix + location prompt + character prompts (for characters present) + action description. Close with mood and camera angle. Do NOT include speech bubble descriptions — bubbles are added as a separate post-processing step.
+  - Build `visual_prompt` by combining: style prefix + location prompt + character prompts (for characters present) + action description. Close with mood and camera angle. Always end with: "no speech bubbles, no text, no captions, no dialogue boxes, no written words". Bubbles are added as a separate post-processing step — never describe them in visual_prompt.
   - `characters_present` must match character names exactly as they appear in the analysis
   - Dialogue should be concise — this is a comic, not a novel
   - Vary camera angles for dynamic pacing

@@ -247,10 +247,14 @@ class ComfyUIRenderer(BaseRenderer):
             return None
 
         image_filename = self._upload_image(image_path)
-        dialogue_text = "\n".join(
-            self._bubble_prompt(b.speaker, b.text, b.bubble_type, bubble_types)
-            for b in panel.dialogue
-        ) if panel.dialogue else ""
+        entries = panel.dialogue or []
+        n = len(entries)
+        bubble_lines = [self._bubble_prompt(b.speaker, b.text, b.bubble_type, bubble_types) for b in entries]
+        header = (
+            f"CRITICAL RULE: add EXACTLY {n} speech element{'s' if n != 1 else ''} to this image — "
+            f"no more, no less. Do not add any extra bubbles, text, labels, or visual elements.\n\n"
+        )
+        dialogue_text = header + "\n".join(f"{i+1}. {line}" for i, line in enumerate(bubble_lines)) if entries else ""
 
         workflow = self._patch_speech_bubble_workflow(workflow, image_filename, dialogue_text)
         return self._submit_and_wait(workflow)

@@ -6,31 +6,32 @@
 # custom_templates_dir and overriding only the types you want to change.
 
 speech: >-
-  exactly one oval speech bubble, white fill, black border, do not repeat the bubble,
-  placed in an empty corner or edge of the panel away from faces and key action,
-  short pointed tail toward {speaker}'s mouth, text: "{text}"
+  ONE single oval speech bubble (no duplicates, no extras), white fill, black border,
+  pointed tail toward {speaker}'s mouth, placed in the nearest empty corner or edge
+  far from faces and key action, text inside bubble: "{text}"
 
 shout: >-
-  exactly one jagged spiky starburst shout bubble, thick black border, oversized bold text,
-  do not repeat the bubble, placed at the panel edge away from the main subject,
-  aggressive pointed tail toward {speaker}, text: "{text}"
+  ONE single jagged spiky starburst shout bubble (no duplicates, no extras),
+  thick black border, oversized bold black text, placed at the panel edge far from
+  the main subject, aggressive tail toward {speaker}, text inside bubble: "{text}"
 
 whisper: >-
-  exactly one small oval bubble, dashed border, small italic lettering,
-  do not repeat the bubble, tucked into a quiet corner near {speaker},
-  delicate tail toward {speaker}'s mouth, text: "{text}"
+  ONE single small oval bubble with dashed border (no duplicates, no extras),
+  small italic text, tucked into a quiet corner near {speaker},
+  delicate tail toward {speaker}'s mouth, text inside bubble: "{text}"
 
 thought: >-
-  exactly one thought bubble made of linked oval puffs, dotted ellipsis trail toward {speaker},
-  do not repeat the bubble, floating in empty space above or beside {speaker},
-  away from other characters, text: "{text}"
+  ONE single thought bubble of linked oval puffs (no duplicates, no extras),
+  dotted ellipsis trail toward {speaker}, floating in empty space above or beside
+  {speaker} far from other characters, text inside bubble: "{text}"
 
 caption: >-
-  exactly one rectangular caption box, solid black border, white fill,
-  spanning the full panel width at the very top or very bottom edge of the panel,
-  never overlapping characters or action, text: "{text}"
+  ONE single rectangular caption box (no duplicates, no extras), solid black border,
+  white fill, full panel width, placed at the TOP edge of the panel if the top quarter
+  is empty, otherwise at the BOTTOM edge — never overlapping characters or action,
+  text inside box: "{text}"
 
 sfx: >-
-  exactly one instance of oversized bold stylised "{text}" sound-effect lettering,
-  integrated into the background of the action, dynamic angle, no bubble or border,
-  do not repeat the text
+  ONE single instance of oversized bold stylised sound-effect text "{text}"
+  (no duplicates, no extras), integrated into the action background,
+  dynamic angle, no bubble or border
